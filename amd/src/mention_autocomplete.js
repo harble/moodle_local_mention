@@ -5,6 +5,10 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
     var KEY_ESCAPE = 27;
     var BOUND_ATTR = 'data-local-mention-bound';
 
+    var isNavigationKey = function(keyCode) {
+        return keyCode === KEY_UP || keyCode === KEY_DOWN || keyCode === KEY_ENTER || keyCode === KEY_ESCAPE;
+    };
+
     var createDropdown = function() {
         var menu = document.createElement('ul');
         menu.className = 'local-mention-menu';
@@ -41,13 +45,30 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
 
     var findMentionQuery = function(value, caretPos) {
         var left = value.substring(0, caretPos);
-        var match = left.match(/(^|\s)@([A-Za-z0-9._-]{1,100})$/);
-        if (!match) {
+        var atPos = left.lastIndexOf('@');
+        if (atPos < 0) {
             return null;
         }
+
+        var query = left.substring(atPos + 1);
+        if (!query || query.length > 100 || /\s|@/.test(query)) {
+            return null;
+        }
+
+        // Avoid triggering inside likely email local-part context, e.g. abc@domain.
+        // Keep chained mentions working, e.g. "@学生1@张三".
+        var localPartStart = atPos;
+        while (localPartStart > 0 && /[^\s\(\[\{,;:>]/.test(left.charAt(localPartStart - 1))) {
+            localPartStart--;
+        }
+        var beforeToken = left.substring(localPartStart, atPos);
+        if (/^[A-Za-z0-9._%+-]+$/.test(beforeToken) && /[A-Za-z]/.test(beforeToken)) {
+            return null;
+        }
+
         return {
-            query: match[2],
-            start: caretPos - match[2].length - 1,
+            query: query,
+            start: atPos,
             end: caretPos
         };
     };
@@ -117,11 +138,30 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         };
     };
 
-    var replaceContenteditableRange = function(node, state, replacement) {
+    var replaceContenteditableRange = function(node, state, replacement, userid) {
         var textnode = state.textNode;
         var mentionRange = state.mentionRange;
         var value = textnode.textContent;
-        textnode.textContent = value.substring(0, mentionRange.start) + replacement + value.substring(mentionRange.end);
+        var before = value.substring(0, mentionRange.start);
+        var after = value.substring(mentionRange.end);
+
+        if (!textnode.parentNode) {
+            return;
+        }
+
+        var beforeNode = document.createTextNode(before);
+        var mentionNode = document.createElement('span');
+        mentionNode.className = 'local-mention-token';
+        mentionNode.setAttribute('data-mention-userid', String(userid));
+        mentionNode.textContent = replacement.trim();
+        var spaceNode = document.createTextNode(' ');
+        var afterNode = document.createTextNode(after);
+
+        textnode.parentNode.insertBefore(beforeNode, textnode);
+        textnode.parentNode.insertBefore(mentionNode, textnode);
+        textnode.parentNode.insertBefore(spaceNode, textnode);
+        textnode.parentNode.insertBefore(afterNode, textnode);
+        textnode.parentNode.removeChild(textnode);
 
         var selection = window.getSelection();
         if (!selection) {
@@ -129,8 +169,7 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         }
 
         var range = document.createRange();
-        var newPos = mentionRange.start + replacement.length;
-        range.setStart(textnode, Math.min(newPos, textnode.textContent.length));
+        range.setStart(afterNode, 0);
         range.collapse(true);
         selection.removeAllRanges();
         selection.addRange(range);
@@ -192,6 +231,8 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
             items: [],
             mentionRange: null,
             textNode: null,
+            lastQuery: '',
+            composing: false,
             pick: function(index) {
                 if (!state.items[index] || !state.mentionRange) {
                     return;
@@ -199,27 +240,37 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
                 var item = state.items[index];
 
                 if (state.type === 'textarea') {
-                    replaceTextareaRange(target, state.mentionRange.start, state.mentionRange.end, '@' + item.username + ' ');
+                    replaceTextareaRange(target, state.mentionRange.start, state.mentionRange.end, '@' + item.fullname + ' ');
                 } else if (state.type === 'contenteditable' && state.textNode) {
                     replaceContenteditableRange(target, {
                         textNode: state.textNode,
                         mentionRange: state.mentionRange
-                    }, '@' + item.username + ' ');
+                    }, '@' + item.fullname + ' ', item.id);
                 }
 
                 state.items = [];
                 state.mentionRange = null;
                 state.textNode = null;
+                state.lastQuery = '';
                 menu.style.display = 'none';
             }
         };
 
-        var refresh = function() {
+        var refresh = function(triggerKeyCode) {
+            if (state.composing) {
+                return;
+            }
+
+            if (isNavigationKey(triggerKeyCode)) {
+                return;
+            }
+
             var mentionState = getMentionState(target);
             if (!mentionState) {
                 state.items = [];
                 state.mentionRange = null;
                 state.textNode = null;
+                state.lastQuery = '';
                 menu.style.display = 'none';
                 return;
             }
@@ -228,16 +279,36 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
             state.mentionRange = mentionState.mentionRange;
             state.textNode = mentionState.textNode || null;
 
-            fetchCandidates(config, mentionState.mentionRange.query).then(function(items) {
+            var currentQuery = mentionState.mentionRange.query;
+            var shouldResetActiveIndex = state.lastQuery !== currentQuery;
+
+            fetchCandidates(config, currentQuery).then(function(items) {
                 state.items = items || [];
-                state.activeIndex = 0;
+                if (shouldResetActiveIndex) {
+                    state.activeIndex = 0;
+                } else if (state.items.length) {
+                    state.activeIndex = Math.min(state.activeIndex, state.items.length - 1);
+                }
+                state.lastQuery = currentQuery;
                 positionDropdown(target, menu, state);
                 renderMenu(menu, state.items, state);
             }).catch(Notification.exception);
         };
 
         target.addEventListener('input', refresh);
-        target.addEventListener('keyup', refresh);
+        target.addEventListener('compositionstart', function() {
+            state.composing = true;
+        });
+        target.addEventListener('compositionend', function() {
+            state.composing = false;
+            refresh();
+        });
+        target.addEventListener('keyup', function(e) {
+            if (e.isComposing) {
+                return;
+            }
+            refresh(e.keyCode);
+        });
         target.addEventListener('keydown', function(e) {
             if (menu.style.display === 'none' || !state.items.length) {
                 return;

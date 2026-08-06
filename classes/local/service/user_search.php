@@ -29,11 +29,19 @@ class user_search {
         $params['q2'] = '%' . $DB->sql_like_escape($query) . '%';
         $params['q3'] = '%' . $DB->sql_like_escape($query) . '%';
         $params['q4'] = '%' . $DB->sql_like_escape($query) . '%';
+        $params['q5'] = '%' . $DB->sql_like_escape($query) . '%';
+        $params['q6'] = '%' . $DB->sql_like_escape($query) . '%';
+        $params['q7'] = '%' . $DB->sql_like_escape($query) . '%';
+        $params['q8'] = '%' . $DB->sql_like_escape($query) . '%';
 
         $like = $DB->sql_like('u.username', ':q1', false, false)
             . ' OR ' . $DB->sql_like('u.firstname', ':q2', false, false)
             . ' OR ' . $DB->sql_like('u.lastname', ':q3', false, false)
-            . ' OR ' . $DB->sql_like('u.email', ':q4', false, false);
+            . ' OR ' . $DB->sql_like('u.email', ':q4', false, false)
+            . ' OR ' . $DB->sql_like('u.middlename', ':q5', false, false)
+            . ' OR ' . $DB->sql_like('u.alternatename', ':q6', false, false)
+            . ' OR ' . $DB->sql_like($DB->sql_concat('u.lastname', "' '", 'u.firstname'), ':q7', false, false)
+            . ' OR ' . $DB->sql_like($DB->sql_concat('u.firstname', "' '", 'u.lastname'), ':q8', false, false);
 
         $sql = "SELECT u.id, u.username, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic,
                        u.middlename, u.alternatename, u.email
@@ -105,6 +113,43 @@ class user_search {
         $mapped = [];
         foreach ($records as $record) {
             $mapped[\core_text::strtolower($record->username)] = $record;
+        }
+
+        return $mapped;
+    }
+
+    public static function resolve_users_by_ids(array $userids, context $context, int $courseid = 0): array {
+        global $DB;
+
+        if (empty($userids)) {
+            return [];
+        }
+
+        $scopecontext = self::resolve_scope_context($context, $courseid);
+        if (!$scopecontext) {
+            return [];
+        }
+
+        list($esql, $params) = get_enrolled_sql($scopecontext, '', 0, true);
+        list($insql, $inparams) = $DB->get_in_or_equal(array_map('intval', $userids), SQL_PARAMS_NAMED, 'uid');
+        $params = array_merge($params, $inparams);
+
+        $sql = "SELECT u.id, u.username, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic,
+                       u.middlename, u.alternatename, u.email
+                  FROM {user} u
+                  JOIN ($esql) je ON je.id = u.id
+                 WHERE u.deleted = 0
+                   AND u.suspended = 0
+                   AND u.id $insql";
+
+        $records = $DB->get_records_sql($sql, $params);
+        if (empty($records)) {
+            return [];
+        }
+
+        $mapped = [];
+        foreach ($records as $record) {
+            $mapped[(int)$record->id] = $record;
         }
 
         return $mapped;

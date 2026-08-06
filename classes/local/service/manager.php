@@ -16,35 +16,60 @@ class manager {
             return ['status' => 'ignored', 'reason' => 'empty_content'];
         }
 
-        $usernames = parser::extract_usernames((string)$validated['content']);
-        if (empty($usernames)) {
+        $content = (string)$validated['content'];
+        $userids = parser::extract_userids($content);
+        $usernames = parser::extract_usernames($content);
+        if (empty($userids) && empty($usernames)) {
             repository::sync_mentions($validated, []);
             return ['status' => 'ok', 'mentions' => 0, 'sent' => 0, 'failed' => 0];
         }
 
         $context = \context::instance_by_id((int)$validated['contextid'], MUST_EXIST);
-        $users = user_search::resolve_users_by_usernames($usernames, $context, (int)$validated['courseid']);
 
         $mentions = [];
-        foreach ($usernames as $username) {
-            $key = \core_text::strtolower($username);
-            if (!isset($users[$key])) {
-                continue;
-            }
+        if (!empty($userids)) {
+            $usersbyid = user_search::resolve_users_by_ids($userids, $context, (int)$validated['courseid']);
+            foreach ($userids as $userid) {
+                if (!isset($usersbyid[$userid])) {
+                    continue;
+                }
 
-            $user = $users[$key];
-            if ((int)$user->id === (int)$validated['authorid']) {
-                continue;
-            }
+                $user = $usersbyid[$userid];
+                if ((int)$user->id === (int)$validated['authorid']) {
+                    continue;
+                }
 
-            if (is_array($validated['alloweduserids']) && !in_array((int)$user->id, $validated['alloweduserids'])) {
-                continue;
-            }
+                if (is_array($validated['alloweduserids']) && !in_array((int)$user->id, $validated['alloweduserids'])) {
+                    continue;
+                }
 
-            $mentions[] = [
-                'userid' => (int)$user->id,
-                'mentiontext' => '@' . $username,
-            ];
+                $mentions[] = [
+                    'userid' => (int)$user->id,
+                    'mentiontext' => '@' . fullname($user, true),
+                ];
+            }
+        } else {
+            $users = user_search::resolve_users_by_usernames($usernames, $context, (int)$validated['courseid']);
+            foreach ($usernames as $username) {
+                $key = \core_text::strtolower($username);
+                if (!isset($users[$key])) {
+                    continue;
+                }
+
+                $user = $users[$key];
+                if ((int)$user->id === (int)$validated['authorid']) {
+                    continue;
+                }
+
+                if (is_array($validated['alloweduserids']) && !in_array((int)$user->id, $validated['alloweduserids'])) {
+                    continue;
+                }
+
+                $mentions[] = [
+                    'userid' => (int)$user->id,
+                    'mentiontext' => '@' . $username,
+                ];
+            }
         }
 
         $sync = repository::sync_mentions($validated, $mentions);

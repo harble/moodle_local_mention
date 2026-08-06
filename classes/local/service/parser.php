@@ -6,6 +6,28 @@ namespace local_mention\local\service;
 defined('MOODLE_INTERNAL') || die();
 
 class parser {
+    public static function extract_userids(string $content): array {
+        if (trim($content) === '') {
+            return [];
+        }
+
+        $matches = [];
+        preg_match_all('/data-mention-userid\s*=\s*["\'](\d+)["\']/u', $content, $matches);
+        if (empty($matches[1])) {
+            return [];
+        }
+
+        $userids = [];
+        foreach ($matches[1] as $userid) {
+            $userid = (int)$userid;
+            if ($userid > 0) {
+                $userids[$userid] = $userid;
+            }
+        }
+
+        return array_values($userids);
+    }
+
     public static function extract_usernames(string $content): array {
         if (trim($content) === '') {
             return [];

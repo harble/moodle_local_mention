@@ -44,23 +44,39 @@ class search_users extends external_api {
         foreach ($users as $user) {
             $response[] = [
                 'id' => (int)$user['id'],
-                'username' => (string)$user['username'],
                 'fullname' => (string)$user['fullname'],
-                'email' => (string)$user['email'],
-                'display' => (string)$user['fullname'] . ' (@' . (string)$user['username'] . ')',
+                'display' => (string)$user['fullname'] . ' (' . self::mask_email((string)$user['email']) . ')',
             ];
         }
 
         return $response;
     }
 
+    private static function mask_email(string $email): string {
+        $email = trim($email);
+        if ($email === '') {
+            return '***';
+        }
+
+        $parts = explode('@', $email, 2);
+        $local = $parts[0] ?? '';
+        $domain = $parts[1] ?? '';
+
+        $first2 = \core_text::substr($local, 0, 2);
+        $maskedlocal = $first2 . '***';
+
+        if ($domain === '') {
+            return $maskedlocal;
+        }
+
+        return $maskedlocal . '@' . $domain;
+    }
+
     public static function execute_returns(): external_multiple_structure {
         return new external_multiple_structure(
             new external_single_structure([
                 'id' => new external_value(PARAM_INT, 'User id'),
-                'username' => new external_value(PARAM_USERNAME, 'Username'),
                 'fullname' => new external_value(PARAM_TEXT, 'Full name'),
-                'email' => new external_value(PARAM_EMAIL, 'Email'),
                 'display' => new external_value(PARAM_TEXT, 'Display label'),
             ])
         );
