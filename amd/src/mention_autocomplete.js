@@ -3,29 +3,23 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
     var KEY_DOWN = 40;
     var KEY_ENTER = 13;
     var KEY_ESCAPE = 27;
+    var BOUND_ATTR = 'data-local-mention-bound';
 
-    var createDropdown = function(textarea) {
+    var createDropdown = function(target) {
         var menu = document.createElement('ul');
         menu.className = 'local-mention-menu';
-        menu.style.position = 'absolute';
-        menu.style.zIndex = '9999';
         menu.style.display = 'none';
-        menu.style.listStyle = 'none';
-        menu.style.padding = '4px';
-        menu.style.margin = '0';
-        menu.style.background = '#fff';
-        menu.style.border = '1px solid #ddd';
-        menu.style.maxHeight = '240px';
-        menu.style.overflowY = 'auto';
-        textarea.parentNode.style.position = 'relative';
-        textarea.parentNode.appendChild(menu);
+        if (target.parentNode) {
+            target.parentNode.style.position = 'relative';
+            target.parentNode.appendChild(menu);
+        }
         return menu;
     };
 
-    var positionDropdown = function(textarea, menu) {
+    var positionDropdown = function(target, menu) {
         menu.style.left = '0px';
-        menu.style.top = (textarea.offsetTop + textarea.offsetHeight + 2) + 'px';
-        menu.style.width = Math.max(280, textarea.offsetWidth * 0.6) + 'px';
+        menu.style.top = (target.offsetTop + target.offsetHeight + 2) + 'px';
+        menu.style.width = Math.max(280, target.offsetWidth * 0.6) + 'px';
     };
 
     var findMentionQuery = function(value, caretPos) {
@@ -50,12 +44,11 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
 
         items.forEach(function(item, idx) {
             var li = document.createElement('li');
+            li.className = 'local-mention-item';
             li.textContent = item.display;
-            li.style.padding = '4px 8px';
-            li.style.cursor = 'pointer';
             li.dataset.index = String(idx);
             if (idx === state.activeIndex) {
-                li.style.background = '#f3f3f3';
+                li.classList.add('active');
             }
             li.addEventListener('mousedown', function(e) {
                 e.preventDefault();
@@ -67,12 +60,95 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         menu.style.display = 'block';
     };
 
-    var replaceRange = function(textarea, start, end, replacement) {
+    var replaceTextareaRange = function(textarea, start, end, replacement) {
         var value = textarea.value;
         textarea.value = value.substring(0, start) + replacement + value.substring(end);
         var newPos = start + replacement.length;
         textarea.setSelectionRange(newPos, newPos);
         textarea.dispatchEvent(new Event('input', {bubbles: true}));
+    };
+
+    var isContentEditable = function(node) {
+        return !!node && node.nodeType === 1 && node.isContentEditable;
+    };
+
+    var getContenteditableState = function(node) {
+        var selection = window.getSelection();
+        if (!selection || !selection.rangeCount) {
+            return null;
+        }
+
+        var range = selection.getRangeAt(0);
+        if (!range.collapsed || !node.contains(range.startContainer)) {
+            return null;
+        }
+
+        if (range.startContainer.nodeType !== 3) {
+            return null;
+        }
+
+        var textnode = range.startContainer;
+        var offset = range.startOffset;
+        var mentionRange = findMentionQuery(textnode.textContent, offset);
+        if (!mentionRange) {
+            return null;
+        }
+
+        return {
+            textNode: textnode,
+            mentionRange: mentionRange
+        };
+    };
+
+    var replaceContenteditableRange = function(node, state, replacement) {
+        var textnode = state.textNode;
+        var mentionRange = state.mentionRange;
+        var value = textnode.textContent;
+        textnode.textContent = value.substring(0, mentionRange.start) + replacement + value.substring(mentionRange.end);
+
+        var selection = window.getSelection();
+        if (!selection) {
+            return;
+        }
+
+        var range = document.createRange();
+        var newPos = mentionRange.start + replacement.length;
+        range.setStart(textnode, Math.min(newPos, textnode.textContent.length));
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        node.dispatchEvent(new Event('input', {bubbles: true}));
+    };
+
+    var getMentionState = function(target) {
+        if (!target) {
+            return null;
+        }
+
+        if (target.tagName && target.tagName.toLowerCase() === 'textarea') {
+            var mentionRange = findMentionQuery(target.value, target.selectionStart);
+            if (!mentionRange) {
+                return null;
+            }
+            return {
+                type: 'textarea',
+                mentionRange: mentionRange
+            };
+        }
+
+        if (isContentEditable(target)) {
+            var state = getContenteditableState(target);
+            if (!state) {
+                return null;
+            }
+            return {
+                type: 'contenteditable',
+                mentionRange: state.mentionRange,
+                textNode: state.textNode
+            };
+        }
+
+        return null;
     };
 
     var fetchCandidates = function(config, query) {
@@ -87,45 +163,65 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         }])[0];
     };
 
-    var wireTextarea = function(textarea, config) {
-        var menu = createDropdown(textarea);
+    var wireTarget = function(target, config) {
+        if (!target || target.getAttribute(BOUND_ATTR) === '1') {
+            return;
+        }
+
+        target.setAttribute(BOUND_ATTR, '1');
+        var menu = createDropdown(target);
         var state = {
             activeIndex: 0,
             items: [],
             mentionRange: null,
+            textNode: null,
             pick: function(index) {
                 if (!state.items[index] || !state.mentionRange) {
                     return;
                 }
                 var item = state.items[index];
-                replaceRange(textarea, state.mentionRange.start, state.mentionRange.end, '@' + item.username + ' ');
+
+                if (state.type === 'textarea') {
+                    replaceTextareaRange(target, state.mentionRange.start, state.mentionRange.end, '@' + item.username + ' ');
+                } else if (state.type === 'contenteditable' && state.textNode) {
+                    replaceContenteditableRange(target, {
+                        textNode: state.textNode,
+                        mentionRange: state.mentionRange
+                    }, '@' + item.username + ' ');
+                }
+
                 state.items = [];
                 state.mentionRange = null;
+                state.textNode = null;
                 menu.style.display = 'none';
             }
         };
 
         var refresh = function() {
-            var caret = textarea.selectionStart;
-            var mentionRange = findMentionQuery(textarea.value, caret);
-            if (!mentionRange) {
+            var mentionState = getMentionState(target);
+            if (!mentionState) {
                 state.items = [];
                 state.mentionRange = null;
+                state.textNode = null;
                 menu.style.display = 'none';
                 return;
             }
 
-            state.mentionRange = mentionRange;
-            fetchCandidates(config, mentionRange.query).then(function(items) {
+            state.type = mentionState.type;
+            state.mentionRange = mentionState.mentionRange;
+            state.textNode = mentionState.textNode || null;
+
+            fetchCandidates(config, mentionState.mentionRange.query).then(function(items) {
                 state.items = items || [];
                 state.activeIndex = 0;
-                positionDropdown(textarea, menu);
+                positionDropdown(target, menu);
                 renderMenu(menu, state.items, state);
             }).catch(Notification.exception);
         };
 
-        textarea.addEventListener('input', refresh);
-        textarea.addEventListener('keydown', function(e) {
+        target.addEventListener('input', refresh);
+        target.addEventListener('keyup', refresh);
+        target.addEventListener('keydown', function(e) {
             if (menu.style.display === 'none' || !state.items.length) {
                 return;
             }
@@ -153,21 +249,57 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         });
     };
 
+    var wireMatchingNodes = function(config, root) {
+        var scope = root || document;
+        var nodes = [];
+
+        if (root && root.nodeType === 1 && root.matches && root.matches(config.selector)) {
+            nodes.push(root);
+        }
+
+        if (scope.querySelectorAll) {
+            nodes = nodes.concat(Array.prototype.slice.call(scope.querySelectorAll(config.selector)));
+        }
+
+        nodes.forEach(function(node) {
+            if ((node.tagName && node.tagName.toLowerCase() === 'textarea') || isContentEditable(node)) {
+                wireTarget(node, config);
+            }
+        });
+    };
+
+    var observeMutations = function(config) {
+        if (!window.MutationObserver) {
+            return;
+        }
+
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                Array.prototype.slice.call(mutation.addedNodes || []).forEach(function(node) {
+                    if (node.nodeType === 1) {
+                        wireMatchingNodes(config, node);
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    };
+
     var init = function(config) {
         if (!config || !config.selector || !config.contextid) {
             return;
         }
 
-        var nodes = document.querySelectorAll(config.selector);
-        if (!nodes.length) {
+        if (!document.body) {
             return;
         }
 
-        nodes.forEach(function(node) {
-            if (node.tagName && node.tagName.toLowerCase() === 'textarea') {
-                wireTextarea(node, config);
-            }
-        });
+        wireMatchingNodes(config, document);
+        observeMutations(config);
     };
 
     return {

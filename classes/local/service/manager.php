@@ -37,6 +37,10 @@ class manager {
                 continue;
             }
 
+            if (is_array($validated['alloweduserids']) && !in_array((int)$user->id, $validated['alloweduserids'])) {
+                continue;
+            }
+
             $mentions[] = [
                 'userid' => (int)$user->id,
                 'mentiontext' => '@' . $username,
@@ -75,7 +79,19 @@ class manager {
         $sanitized['subject'] = isset($payload['subject']) ? (string)$payload['subject'] : '';
         $sanitized['url'] = isset($payload['url']) ? (string)$payload['url'] : '';
         $sanitized['format'] = isset($payload['format']) ? (int)$payload['format'] : FORMAT_HTML;
+        $sanitized['alloweduserids'] = null;
         $sanitized['contenthash'] = sha1((string)$sanitized['content']);
+
+        if (array_key_exists('alloweduserids', $payload) && is_array($payload['alloweduserids'])) {
+            $alloweduserids = [];
+            foreach ($payload['alloweduserids'] as $userid) {
+                $userid = (int)$userid;
+                if ($userid > 0) {
+                    $alloweduserids[$userid] = $userid;
+                }
+            }
+            $sanitized['alloweduserids'] = array_values($alloweduserids);
+        }
 
         if ($sanitized['component'] === '' || $sanitized['itemtype'] === '' || $sanitized['itemid'] <= 0 ||
             $sanitized['contextid'] <= 0 || $sanitized['authorid'] <= 0) {

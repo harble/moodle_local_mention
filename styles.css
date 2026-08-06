@@ -1,0 +1,19 @@
+.local-mention-menu {
+    position: absolute;
+    z-index: 9999;
+    list-style: none;
+    padding: 4px;
+    margin: 0;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.local-mention-item {
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.local-mention-item.active,
+.local-mention-item:hover {
+    text-decoration: underline;
+}
