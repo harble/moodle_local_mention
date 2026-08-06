@@ -31,19 +31,30 @@ class notifier {
             $eventdata->notification = 1;
             $eventdata->userfrom = $author;
             $eventdata->userto = $userto;
-            $eventdata->subject = get_string('mentionnotificationsubject', 'local_mention');
+            $subject = trim((string)($payload['subject'] ?? ''));
+            $itemlabel = $subject !== '' ? $subject : get_string('mentionnotificationdefaultitem', 'local_mention');
+            $url = (string)($payload['url'] ?? '');
+            $eventdata->subject = get_string('mentionnotificationsubject', 'local_mention', (object) [
+                'author' => fullname($author, true),
+                'item' => $itemlabel,
+            ]);
             $eventdata->fullmessage = get_string('mentionnotificationfullmessage', 'local_mention', (object) [
                 'author' => fullname($author, true),
-                'item' => $payload['itemtype'],
-                'url' => $payload['url'] ?? '',
+                'item' => $itemlabel,
+                'url' => $url,
             ]);
             $eventdata->fullmessageformat = FORMAT_PLAIN;
-            $eventdata->fullmessagehtml = nl2br(s($eventdata->fullmessage));
+            $eventdata->fullmessagehtml = get_string('mentionnotificationfullmessagehtml', 'local_mention', (object) [
+                'author' => s(fullname($author, true)),
+                'item' => s($itemlabel),
+                'url' => s($url),
+                'link' => $url !== '' ? \html_writer::link($url, s($itemlabel)) : s($itemlabel),
+            ]);
             $eventdata->smallmessage = get_string('mentionnotificationsmall', 'local_mention', fullname($author, true));
 
-            if (!empty($payload['url'])) {
-                $eventdata->contexturl = $payload['url'];
-                $eventdata->contexturlname = $payload['subject'] ?? get_string('pluginname', 'local_mention');
+            if ($url !== '') {
+                $eventdata->contexturl = $url;
+                $eventdata->contexturlname = $itemlabel;
             }
 
             $result = message_send($eventdata);
