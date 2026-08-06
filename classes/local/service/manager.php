@@ -25,10 +25,16 @@ class manager {
         }
 
         $context = \context::instance_by_id((int)$validated['contextid'], MUST_EXIST);
+        $bypassrestrictions = !empty($validated['searchallusers']);
 
         $mentions = [];
         if (!empty($userids)) {
-            $usersbyid = user_search::resolve_users_by_ids($userids, $context, (int)$validated['courseid']);
+            $usersbyid = user_search::resolve_users_by_ids(
+                $userids,
+                $context,
+                (int)$validated['courseid'],
+                $bypassrestrictions
+            );
             foreach ($userids as $userid) {
                 if (!isset($usersbyid[$userid])) {
                     continue;
@@ -39,7 +45,8 @@ class manager {
                     continue;
                 }
 
-                if (is_array($validated['alloweduserids']) && !in_array((int)$user->id, $validated['alloweduserids'])) {
+                if (!$bypassrestrictions && is_array($validated['alloweduserids']) &&
+                        !in_array((int)$user->id, $validated['alloweduserids'])) {
                     continue;
                 }
 
@@ -49,7 +56,12 @@ class manager {
                 ];
             }
         } else {
-            $users = user_search::resolve_users_by_usernames($usernames, $context, (int)$validated['courseid']);
+            $users = user_search::resolve_users_by_usernames(
+                $usernames,
+                $context,
+                (int)$validated['courseid'],
+                $bypassrestrictions
+            );
             foreach ($usernames as $username) {
                 $key = \core_text::strtolower($username);
                 if (!isset($users[$key])) {
@@ -61,7 +73,8 @@ class manager {
                     continue;
                 }
 
-                if (is_array($validated['alloweduserids']) && !in_array((int)$user->id, $validated['alloweduserids'])) {
+                if (!$bypassrestrictions && is_array($validated['alloweduserids']) &&
+                        !in_array((int)$user->id, $validated['alloweduserids'])) {
                     continue;
                 }
 
@@ -104,6 +117,7 @@ class manager {
         $sanitized['subject'] = isset($payload['subject']) ? (string)$payload['subject'] : '';
         $sanitized['url'] = isset($payload['url']) ? (string)$payload['url'] : '';
         $sanitized['format'] = isset($payload['format']) ? (int)$payload['format'] : FORMAT_HTML;
+        $sanitized['searchallusers'] = !empty($payload['searchallusers']);
         $sanitized['alloweduserids'] = null;
         $sanitized['contenthash'] = sha1((string)$sanitized['content']);
 
