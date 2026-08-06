@@ -5,21 +5,38 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
     var KEY_ESCAPE = 27;
     var BOUND_ATTR = 'data-local-mention-bound';
 
-    var createDropdown = function(target) {
+    var createDropdown = function() {
         var menu = document.createElement('ul');
         menu.className = 'local-mention-menu';
         menu.style.display = 'none';
-        if (target.parentNode) {
-            target.parentNode.style.position = 'relative';
-            target.parentNode.appendChild(menu);
-        }
+        document.body.appendChild(menu);
         return menu;
     };
 
-    var positionDropdown = function(target, menu) {
-        menu.style.left = '0px';
-        menu.style.top = (target.offsetTop + target.offsetHeight + 2) + 'px';
-        menu.style.width = Math.max(280, target.offsetWidth * 0.6) + 'px';
+    var positionDropdown = function(target, menu, state) {
+        var rect = target.getBoundingClientRect();
+        var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+
+        if (state && state.type === 'contenteditable' && state.textNode) {
+            // For contenteditable, try to position based on cursor
+            var selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                var range = selection.getRangeAt(0);
+                var cursorRect = range.getBoundingClientRect();
+                if (cursorRect) {
+                    menu.style.left = (cursorRect.left + scrollLeft) + 'px';
+                    menu.style.top = (cursorRect.bottom + scrollTop + 2) + 'px';
+                    menu.style.width = '280px';
+                    return;
+                }
+            }
+        }
+
+        // For textarea or fallback
+        menu.style.left = (rect.left + scrollLeft) + 'px';
+        menu.style.top = (rect.bottom + scrollTop + 2) + 'px';
+        menu.style.width = Math.max(280, rect.width * 0.7) + 'px';
     };
 
     var findMentionQuery = function(value, caretPos) {
@@ -169,7 +186,7 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         }
 
         target.setAttribute(BOUND_ATTR, '1');
-        var menu = createDropdown(target);
+        var menu = createDropdown();
         var state = {
             activeIndex: 0,
             items: [],
@@ -214,7 +231,7 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
             fetchCandidates(config, mentionState.mentionRange.query).then(function(items) {
                 state.items = items || [];
                 state.activeIndex = 0;
-                positionDropdown(target, menu);
+                positionDropdown(target, menu, state);
                 renderMenu(menu, state.items, state);
             }).catch(Notification.exception);
         };
