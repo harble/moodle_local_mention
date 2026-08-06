@@ -78,7 +78,7 @@ class user_search {
     private static function search_all_users(string $query, int $limit): array {
         global $DB;
 
-        if (\core_text::strlen($query) < 2) {
+        if (\core_text::strlen($query) < 1) {
             return [];
         }
 

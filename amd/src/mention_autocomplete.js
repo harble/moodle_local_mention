@@ -55,6 +55,11 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
             return null;
         }
 
+        // Stop mention lookup when punctuation appears after @ (full-width and half-width).
+        if (/[,.;:!?，。；：！？、（）()\[\]{}<>《》「」『』【】"'“”‘’`~！￥…—]/.test(query)) {
+            return null;
+        }
+
         // Avoid triggering inside likely email local-part context, e.g. abc@domain.
         // Keep chained mentions working, e.g. "@学生1@张三".
         var localPartStart = atPos;
