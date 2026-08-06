@@ -22,15 +22,18 @@ class search_users extends external_api {
             'contextid' => new external_value(PARAM_INT, 'Context id'),
             'courseid' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
             'limit' => new external_value(PARAM_INT, 'Max items, capped to 10', VALUE_DEFAULT, 10),
+            'searchallusers' => new external_value(PARAM_BOOL, 'Whether to search across all system users', VALUE_DEFAULT, false),
         ]);
     }
 
-    public static function execute(string $query, int $contextid, int $courseid = 0, int $limit = 10): array {
+    public static function execute(string $query, int $contextid, int $courseid = 0, int $limit = 10,
+            bool $searchallusers = false): array {
         $params = self::validate_parameters(self::execute_parameters(), [
             'query' => $query,
             'contextid' => $contextid,
             'courseid' => $courseid,
             'limit' => $limit,
+            'searchallusers' => $searchallusers,
         ]);
 
         $context = context::instance_by_id($params['contextid'], MUST_EXIST);
@@ -38,7 +41,13 @@ class search_users extends external_api {
 
         require_login();
 
-        $users = user_search::search($params['query'], $context, $params['courseid'], $params['limit']);
+        $users = user_search::search(
+            $params['query'],
+            $context,
+            $params['courseid'],
+            $params['limit'],
+            !empty($params['searchallusers'])
+        );
 
         $response = [];
         foreach ($users as $user) {

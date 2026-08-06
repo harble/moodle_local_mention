@@ -8,7 +8,8 @@ use context;
 defined('MOODLE_INTERNAL') || die();
 
 class user_search {
-    public static function search(string $query, context $context, int $courseid = 0, int $limit = 10): array {
+    public static function search(string $query, context $context, int $courseid = 0, int $limit = 10,
+            bool $searchallusers = false): array {
         global $DB;
 
         $query = trim($query);
@@ -17,6 +18,10 @@ class user_search {
         }
 
         $limit = max(1, min(10, $limit));
+
+        if ($searchallusers) {
+            return self::search_all_users($query, $limit);
+        }
 
         $scopecontext = self::resolve_scope_context($context, $courseid);
         if (!$scopecontext) {
@@ -47,6 +52,56 @@ class user_search {
                        u.middlename, u.alternatename, u.email
                   FROM {user} u
                   JOIN ($esql) je ON je.id = u.id
+                 WHERE u.deleted = 0
+                   AND u.suspended = 0
+                   AND ($like)
+              ORDER BY u.lastname ASC, u.firstname ASC, u.username ASC";
+
+        $records = $DB->get_records_sql($sql, $params, 0, $limit);
+        if (empty($records)) {
+            return [];
+        }
+
+        $response = [];
+        foreach ($records as $record) {
+            $response[] = [
+                'id' => (int)$record->id,
+                'username' => (string)$record->username,
+                'fullname' => fullname($record, true),
+                'email' => (string)$record->email,
+            ];
+        }
+
+        return $response;
+    }
+
+    private static function search_all_users(string $query, int $limit): array {
+        global $DB;
+
+        if (\core_text::strlen($query) < 2) {
+            return [];
+        }
+
+        $prefix = $DB->sql_like_escape($query) . '%';
+        $params = [
+            'q1' => $prefix,
+            'q2' => $prefix,
+            'q3' => $prefix,
+            'q4' => $prefix,
+            'q5' => $prefix,
+            'q6' => $prefix,
+        ];
+
+        $like = $DB->sql_like('u.username', ':q1', false, false)
+            . ' OR ' . $DB->sql_like('u.firstname', ':q2', false, false)
+            . ' OR ' . $DB->sql_like('u.lastname', ':q3', false, false)
+            . ' OR ' . $DB->sql_like('u.email', ':q4', false, false)
+            . ' OR ' . $DB->sql_like('u.middlename', ':q5', false, false)
+            . ' OR ' . $DB->sql_like('u.alternatename', ':q6', false, false);
+
+        $sql = "SELECT u.id, u.username, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic,
+                       u.middlename, u.alternatename, u.email
+                  FROM {user} u
                  WHERE u.deleted = 0
                    AND u.suspended = 0
                    AND ($like)

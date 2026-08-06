@@ -214,7 +214,8 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
                 query: query,
                 contextid: config.contextid,
                 courseid: config.courseid || 0,
-                limit: 10
+                limit: 10,
+                searchallusers: !!config.searchallusers
             }
         }])[0];
     };
