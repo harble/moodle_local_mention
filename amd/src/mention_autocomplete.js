@@ -9,6 +9,14 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         return keyCode === KEY_UP || keyCode === KEY_DOWN || keyCode === KEY_ENTER || keyCode === KEY_ESCAPE;
     };
 
+    var getMinimumQueryLength = function(query) {
+        if (/^[\u4E00-\u9FFF]/u.test(query)) {
+            return 1;
+        }
+
+        return 2;
+    };
+
     var createDropdown = function() {
         var menu = document.createElement('ul');
         menu.className = 'local-mention-menu';
@@ -239,6 +247,7 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
             textNode: null,
             lastQuery: '',
             composing: false,
+            refreshTimer: null,
             pick: function(index) {
                 if (!state.items[index] || !state.mentionRange) {
                     return;
@@ -286,6 +295,16 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
             state.textNode = mentionState.textNode || null;
 
             var currentQuery = mentionState.mentionRange.query;
+            var minQueryLength = getMinimumQueryLength(currentQuery);
+            if (currentQuery.length < minQueryLength) {
+                state.items = [];
+                state.mentionRange = null;
+                state.textNode = null;
+                state.lastQuery = '';
+                menu.style.display = 'none';
+                return;
+            }
+
             var shouldResetActiveIndex = state.lastQuery !== currentQuery;
 
             fetchCandidates(config, currentQuery).then(function(items) {
@@ -301,19 +320,26 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
             }).catch(Notification.exception);
         };
 
-        target.addEventListener('input', refresh);
+        var scheduleRefresh = function(triggerKeyCode) {
+            if (state.refreshTimer) {
+                clearTimeout(state.refreshTimer);
+            }
+
+            state.refreshTimer = window.setTimeout(function() {
+                state.refreshTimer = null;
+                refresh(triggerKeyCode);
+            }, 180);
+        };
+
+        target.addEventListener('input', function() {
+            scheduleRefresh();
+        });
         target.addEventListener('compositionstart', function() {
             state.composing = true;
         });
         target.addEventListener('compositionend', function() {
             state.composing = false;
-            refresh();
-        });
-        target.addEventListener('keyup', function(e) {
-            if (e.isComposing) {
-                return;
-            }
-            refresh(e.keyCode);
+            scheduleRefresh();
         });
         target.addEventListener('keydown', function(e) {
             if (menu.style.display === 'none' || !state.items.length) {

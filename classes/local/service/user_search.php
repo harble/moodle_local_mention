@@ -38,6 +38,8 @@ class user_search {
         $params['q6'] = '%' . $DB->sql_like_escape($query) . '%';
         $params['q7'] = '%' . $DB->sql_like_escape($query) . '%';
         $params['q8'] = '%' . $DB->sql_like_escape($query) . '%';
+        $params['q9'] = '%' . $DB->sql_like_escape($query) . '%';
+        $params['q10'] = '%' . $DB->sql_like_escape($query) . '%';
 
         $like = $DB->sql_like('u.username', ':q1', false, false)
             . ' OR ' . $DB->sql_like('u.firstname', ':q2', false, false)
@@ -46,7 +48,9 @@ class user_search {
             . ' OR ' . $DB->sql_like('u.middlename', ':q5', false, false)
             . ' OR ' . $DB->sql_like('u.alternatename', ':q6', false, false)
             . ' OR ' . $DB->sql_like($DB->sql_concat('u.lastname', "' '", 'u.firstname'), ':q7', false, false)
-            . ' OR ' . $DB->sql_like($DB->sql_concat('u.firstname', "' '", 'u.lastname'), ':q8', false, false);
+            . ' OR ' . $DB->sql_like($DB->sql_concat('u.firstname', "' '", 'u.lastname'), ':q8', false, false)
+            . ' OR ' . $DB->sql_like($DB->sql_concat('u.lastname', 'u.firstname'), ':q9', false, false)
+            . ' OR ' . $DB->sql_like($DB->sql_concat('u.firstname', 'u.lastname'), ':q10', false, false);
 
         $sql = "SELECT u.id, u.username, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic,
                        u.middlename, u.alternatename, u.email
@@ -89,6 +93,8 @@ class user_search {
             'u.email',
             'u.alternatename',
             'u.middlename',
+            $DB->sql_concat('u.lastname', 'u.firstname'),
+            $DB->sql_concat('u.firstname', 'u.lastname'),
         ];
 
         $records = self::run_staged_prefix_search($fields, $query, $limit);
