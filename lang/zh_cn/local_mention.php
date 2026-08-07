@@ -9,3 +9,6 @@ $string['mentionnotificationdefaultitem'] = '一条帖子';
 $string['mentionnotificationfullmessage'] = '{$a->author} 在 {$a->item} 中提及了你。打开：{$a->url}';
 $string['mentionnotificationfullmessagehtml'] = '{$a->author} 在 {$a->link} 中提及了你。';
 $string['mentionnotificationsmall'] = '{$a} 提及了你';
+$string['unresolvedmentionsconfirmtitle'] = '检测到以下@提及无法识别为有效提及';
+$string['unresolvedmentionsconfirmbody'] = '{$a}\n\n选择“确定”：返回编辑器，重新从下拉列表选择提及。\n选择“取消”：忽略这些@，继续提交。';
+$string['unresolvedmentionsconfirmmoresuffix'] = ' 等另外 {$a} 个';

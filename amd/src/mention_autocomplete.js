@@ -1,9 +1,13 @@
-define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
+define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notification, Str) {
     var KEY_UP = 38;
     var KEY_DOWN = 40;
     var KEY_ENTER = 13;
     var KEY_ESCAPE = 27;
     var BOUND_ATTR = 'data-local-mention-bound';
+    var FORM_BOUND_ATTR = 'data-local-mention-submit-bound';
+    var IGNORE_ATTR = 'data-local-mention-ignore-unresolved';
+
+    var PLAIN_MENTION_PATTERN = /(^|[\s\(\[\{,;:>])@([^\s@,.;:!?，。；：！？、（）()\[\]{}<>《》「」『』【】"'“”‘’`~！￥…—]{1,100})/gu;
 
     var isNavigationKey = function(keyCode) {
         return keyCode === KEY_UP || keyCode === KEY_DOWN || keyCode === KEY_ENTER || keyCode === KEY_ESCAPE;
@@ -165,6 +169,7 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         var beforeNode = document.createTextNode(before);
         var mentionNode = document.createElement('span');
         mentionNode.className = 'local-mention-token';
+        mentionNode.setAttribute('contenteditable', 'false');
         mentionNode.setAttribute('data-mention-userid', String(userid));
         mentionNode.textContent = replacement.trim();
         var spaceNode = document.createTextNode(' ');
@@ -233,12 +238,173 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         }])[0];
     };
 
+    var extractPlainMentions = function(text) {
+        if (!text) {
+            return [];
+        }
+
+        var mentions = [];
+        var seen = {};
+        var match;
+
+        while ((match = PLAIN_MENTION_PATTERN.exec(text)) !== null) {
+            var token = '@' + String(match[2] || '').trim();
+            if (!token || token === '@' || seen[token]) {
+                continue;
+            }
+            seen[token] = true;
+            mentions.push(token);
+        }
+
+        return mentions;
+    };
+
+    var getUnresolvedMentions = function(target) {
+        if (!target) {
+            return [];
+        }
+
+        if (target.tagName && target.tagName.toLowerCase() === 'textarea') {
+            return extractPlainMentions(target.value || '');
+        }
+
+        if (!isContentEditable(target)) {
+            return [];
+        }
+
+        var unresolved = [];
+        var seen = {};
+        var walker = document.createTreeWalker(target, window.NodeFilter.SHOW_TEXT, {
+            acceptNode: function(node) {
+                if (!node || !node.nodeValue || !node.nodeValue.trim()) {
+                    return window.NodeFilter.FILTER_REJECT;
+                }
+
+                var parent = node.parentNode;
+                if (parent && parent.nodeType === 1 && parent.hasAttribute('data-mention-userid')) {
+                    return window.NodeFilter.FILTER_REJECT;
+                }
+
+                return window.NodeFilter.FILTER_ACCEPT;
+            }
+        });
+        var current;
+
+        while ((current = walker.nextNode())) {
+            extractPlainMentions(current.nodeValue || '').forEach(function(token) {
+                if (!seen[token]) {
+                    seen[token] = true;
+                    unresolved.push(token);
+                }
+            });
+        }
+
+        return unresolved;
+    };
+
+    var getFormForTarget = function(target) {
+        if (!target || !target.closest) {
+            return null;
+        }
+
+        return target.closest('form');
+    };
+
+    var buildUnresolvedMessage = function(strings, mentions) {
+        var summary = mentions.slice(0, 5).join('、');
+        if (mentions.length > 5) {
+            summary += strings.moreSuffix.replace('{$a}', String(mentions.length - 5));
+        }
+
+        return strings.body
+            .replace(/\\n/g, '\n')
+            .replace('{$a}', summary);
+    };
+
+    var promptUnresolvedMentions = function(mentions, onReselect, onIgnore) {
+        Str.get_strings([
+            {key: 'unresolvedmentionsconfirmtitle', component: 'local_mention'},
+            {key: 'unresolvedmentionsconfirmbody', component: 'local_mention'},
+            {key: 'unresolvedmentionsconfirmmoresuffix', component: 'local_mention'}
+        ]).then(function(results) {
+            var strings = {
+                title: results[0],
+                body: results[1],
+                moreSuffix: results[2]
+            };
+            var confirmed = window.confirm(strings.title + '\n\n' + buildUnresolvedMessage(strings, mentions));
+            if (confirmed) {
+                onReselect();
+                return;
+            }
+
+            onIgnore();
+        }).catch(Notification.exception);
+    };
+
+    var bindSubmitGuard = function(target) {
+        var form = getFormForTarget(target);
+        if (!form || form.getAttribute(FORM_BOUND_ATTR) === '1') {
+            return;
+        }
+
+        form.setAttribute(FORM_BOUND_ATTR, '1');
+        form.addEventListener('submit', function(e) {
+            if (form.getAttribute(IGNORE_ATTR) === '1') {
+                form.removeAttribute(IGNORE_ATTR);
+                return;
+            }
+
+            var unresolved = [];
+            var editors = form.querySelectorAll(
+                'textarea[name="message[text]"], textarea[name="message"], #id_message, ' +
+                '.editor_atto_content[contenteditable="true"], .hsuforum-textarea[contenteditable="true"]'
+            );
+
+            Array.prototype.slice.call(editors).forEach(function(editor) {
+                getUnresolvedMentions(editor).forEach(function(token) {
+                    if (unresolved.indexOf(token) === -1) {
+                        unresolved.push(token);
+                    }
+                });
+            });
+
+            if (!unresolved.length) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            promptUnresolvedMentions(unresolved, function() {
+                if (typeof target.focus === 'function') {
+                    target.focus();
+                }
+            }, function() {
+                form.setAttribute(IGNORE_ATTR, '1');
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+            });
+        });
+
+        var resetIgnore = function() {
+            form.removeAttribute(IGNORE_ATTR);
+        };
+
+        form.addEventListener('input', resetIgnore);
+        form.addEventListener('change', resetIgnore);
+    };
+
     var wireTarget = function(target, config) {
         if (!target || target.getAttribute(BOUND_ATTR) === '1') {
             return;
         }
 
         target.setAttribute(BOUND_ATTR, '1');
+        bindSubmitGuard(target);
         var menu = createDropdown();
         var state = {
             activeIndex: 0,

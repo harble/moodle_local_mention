@@ -25,3 +25,9 @@
     background-color: #e8f4f8;
     text-decoration: none;
 }
+
+.local-mention-token {
+    color: #005a9c;
+    /* font-weight: 600 */
+
+}
