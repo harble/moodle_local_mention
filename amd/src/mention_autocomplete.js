@@ -100,8 +100,22 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         items.forEach(function(item, idx) {
             var li = document.createElement('li');
             li.className = 'local-mention-item';
-            li.textContent = item.display;
             li.dataset.index = String(idx);
+
+            if (item.avatarurl) {
+                var img = document.createElement('img');
+                img.className = 'local-mention-avatar';
+                img.src = item.avatarurl;
+                img.alt = '';
+                img.draggable = false;
+                li.appendChild(img);
+            }
+
+            var span = document.createElement('span');
+            span.className = 'local-mention-text';
+            span.textContent = item.display;
+            li.appendChild(span);
+
             if (idx === state.activeIndex) {
                 li.classList.add('active');
             }

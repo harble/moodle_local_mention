@@ -53,7 +53,7 @@ class user_search {
             . ' OR ' . $DB->sql_like($DB->sql_concat('u.firstname', 'u.lastname'), ':q10', false, false);
 
         $sql = "SELECT u.id, u.username, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic,
-                       u.middlename, u.alternatename, u.email
+                       u.middlename, u.alternatename, u.email, u.picture, u.imagealt
                   FROM {user} u
                   JOIN ($esql) je ON je.id = u.id
                  WHERE u.deleted = 0
@@ -73,6 +73,7 @@ class user_search {
                 'username' => (string)$record->username,
                 'fullname' => fullname($record, true),
                 'email' => (string)$record->email,
+                'avatarurl' => self::get_avatar_url($record),
             ];
         }
 
@@ -135,7 +136,7 @@ class user_search {
         }
 
         $sql = "SELECT u.id, u.username, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic,
-                       u.middlename, u.alternatename, u.email
+                       u.middlename, u.alternatename, u.email, u.picture, u.imagealt
                   FROM {user} u
                                     $joinsql
                  WHERE u.deleted = 0
@@ -179,7 +180,7 @@ class user_search {
         $params = array_merge($params, $inparams);
 
         $sql = "SELECT u.id, u.username, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic,
-                       u.middlename, u.alternatename, u.email
+                       u.middlename, u.alternatename, u.email, u.picture, u.imagealt
                   FROM {user} u
                   $joinsql
                  WHERE u.deleted = 0
@@ -214,7 +215,7 @@ class user_search {
             $paramkey = 'q' . $index;
             $params = [$paramkey => $prefix];
             $sql = "SELECT u.id, u.username, u.firstname, u.lastname, u.firstnamephonetic, u.lastnamephonetic,
-                           u.middlename, u.alternatename, u.email
+                           u.middlename, u.alternatename, u.email, u.picture, u.imagealt
                       FROM {user} u
                      WHERE u.deleted = 0
                        AND u.suspended = 0
@@ -241,10 +242,18 @@ class user_search {
                 'username' => (string)$record->username,
                 'fullname' => fullname($record, true),
                 'email' => (string)$record->email,
+                'avatarurl' => self::get_avatar_url($record),
             ];
         }
 
         return $response;
+    }
+
+    private static function get_avatar_url(\stdClass $user): string {
+        global $PAGE;
+        $userpicture = new \user_picture($user);
+        $userpicture->size = 24;
+        return $userpicture->get_url($PAGE)->out(false);
     }
 
     private static function resolve_scope_context(context $context, int $courseid = 0): ?context {

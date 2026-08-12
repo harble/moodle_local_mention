@@ -55,6 +55,7 @@ class search_users extends external_api {
                 'id' => (int)$user['id'],
                 'fullname' => (string)$user['fullname'],
                 'display' => (string)$user['fullname'] . ' (' . self::mask_email((string)$user['email']) . ')',
+                'avatarurl' => (string)($user['avatarurl'] ?? ''),
             ];
         }
 
@@ -87,6 +88,7 @@ class search_users extends external_api {
                 'id' => new external_value(PARAM_INT, 'User id'),
                 'fullname' => new external_value(PARAM_TEXT, 'Full name'),
                 'display' => new external_value(PARAM_TEXT, 'Display label'),
+                'avatarurl' => new external_value(PARAM_TEXT, 'Avatar URL'),
             ])
         );
     }

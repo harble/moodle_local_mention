@@ -13,11 +13,28 @@
 }
 
 .local-mention-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 6px 12px;
     cursor: pointer;
     white-space: nowrap;
     font-size: 13px;
     color: #333333;
+}
+
+.local-mention-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.local-mention-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .local-mention-item.active,
