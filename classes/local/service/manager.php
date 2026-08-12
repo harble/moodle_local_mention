@@ -50,6 +50,15 @@ class manager {
                     continue;
                 }
 
+                /*
+                 * Check if the user can access the item being mentioned. This is a special case for hsuforum posts where
+                 * a user may be mentioned in a post that they do not have access to. In this case, we do not want to
+                 * send them a notification.
+                 */
+                // if (!self::can_access_payload_item($validated, $user)) {
+                //    continue;
+                // }
+
                 $mentions[] = [
                     'userid' => (int)$user->id,
                     'mentiontext' => '@' . fullname($user, true),
@@ -78,6 +87,10 @@ class manager {
                     continue;
                 }
 
+                // if (!self::can_access_payload_item($validated, $user)) {
+                //    continue;
+                // }
+
                 $mentions[] = [
                     'userid' => (int)$user->id,
                     'mentiontext' => '@' . $username,
@@ -96,6 +109,42 @@ class manager {
             'sent' => $delivery['sent'],
             'failed' => $delivery['failed'],
         ];
+    }
+
+    private static function can_access_payload_item(array $payload, $user): bool {
+        global $CFG, $DB;
+
+        if (!$user || empty($user->id)) {
+            return false;
+        }
+
+        if (($payload['component'] ?? '') !== 'mod_hsuforum' || ($payload['itemtype'] ?? '') !== 'post') {
+            return true;
+        }
+
+        require_once($CFG->dirroot . '/mod/hsuforum/lib.php');
+
+        $post = $DB->get_record('hsuforum_posts', ['id' => (int)($payload['itemid'] ?? 0)]);
+        if (!$post) {
+            return false;
+        }
+
+        $discussion = $DB->get_record('hsuforum_discussions', ['id' => (int)$post->discussion]);
+        if (!$discussion) {
+            return false;
+        }
+
+        $forum = $DB->get_record('hsuforum', ['id' => (int)$discussion->forum]);
+        if (!$forum) {
+            return false;
+        }
+
+        $cm = get_coursemodule_from_instance('hsuforum', $forum->id, $forum->course);
+        if (!$cm) {
+            return false;
+        }
+
+        return \hsuforum_user_can_see_post($forum, $discussion, $post, $user, $cm);
     }
 
     private static function validate_payload(array $payload): array {
