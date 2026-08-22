@@ -12,3 +12,7 @@ $string['mentionnotificationsmall'] = '{$a} mentioned you';
 $string['unresolvedmentionsconfirmtitle'] = 'Some @mentions cannot be recognized as valid mentions';
 $string['unresolvedmentionsconfirmbody'] = '{$a}\n\nChoose OK to return and re-select these mentions from the suggestion list.\nChoose Cancel to ignore them and continue submitting.';
 $string['unresolvedmentionsconfirmmoresuffix'] = ' and {$a} more';
+$string['datareviewsubject'] = 'Database review: {$a} submitted new content';
+$string['datareviewcontent'] = 'User {$a->submitter} submitted pending Database content. View: {$a->url}';
+$string['datareviewremindersubject'] = 'Database review reminder #{$a}';
+$string['datareviewremindercontent'] = '[Reminder #{$a->seq}] User {$a->submitter} submitted Database content {$a->elapseddays} days ago. Please review: {$a->url}';
