@@ -21,9 +21,9 @@ function xmldb_local_mention_upgrade(int $oldversion): bool {
             $table->add_field('userto', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null);
             $table->add_field('notiftype', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL, null, null);
             $table->add_field('seq', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '1');
-            $table->add_field('subject', XMLDB_TYPE_CHAR, '255', null, XMLDB_NULL, null, null);
-            $table->add_field('content', XMLDB_TYPE_TEXT, null, null, XMLDB_NULL, null, null);
-            $table->add_field('payload', XMLDB_TYPE_TEXT, null, null, XMLDB_NULL, null, null);
+            $table->add_field('subject', XMLDB_TYPE_CHAR, '255', null, null, null, null);
+            $table->add_field('content', XMLDB_TYPE_TEXT, null, null, null, null);
+            $table->add_field('payload', XMLDB_TYPE_TEXT, null, null, null, null);
             $table->add_field('status', XMLDB_TYPE_INTEGER, '2', null, XMLDB_NOTNULL, null, '0');
             $table->add_field('scheduledtime', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, '0');
             $table->add_field('senttime', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, '0');
