@@ -26,10 +26,6 @@ class database_observer {
             return;
         }
 
-        if (self::has_draft_tag($record->id)) {
-            return;
-        }
-
         $cm = $DB->get_record('course_modules', ['id' => $event->contextinstanceid]);
         if (!$cm) {
             return;
@@ -77,33 +73,67 @@ class database_observer {
         }
     }
 
-    private static function has_draft_tag(int $recordid): bool {
-        $tags = \core_tag_tag::get_item_tags_array('mod_data', 'data_records', $recordid);
-        foreach ($tags as $tagname) {
-            if (stripos($tagname, 'draft') !== false) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static function resolve_reviewer_ids(\stdClass $cm, \stdClass $record): array {
         global $DB;
 
         $reviewerids = [];
 
-        $pluginconfig = get_config('local_mention');
-        $configured = $pluginconfig->datareviewers ?? '';
-        if (!empty($configured)) {
-            $reviewerids = array_filter(array_map('intval', explode(',', $configured)));
+        $data = $DB->get_record('data', ['id' => $cm->instance]);
+        if (!$data) {
+            return self::get_fallback_reviewers();
         }
 
-        if (empty($reviewerids)) {
-            $coursecontext = \context_course::instance($cm->course);
-            $admins = get_admins();
-            foreach ($admins as $admin) {
-                $reviewerids[] = (int)$admin->id;
+        $channelsfield = $DB->get_record('data_fields', [
+            'dataid' => $cm->instance,
+            'description' => 'channels',
+        ]);
+        if (!$channelsfield) {
+            return self::get_fallback_reviewers();
+        }
+
+        $channelsvalue = $DB->get_field('data_content', 'content', [
+            'recordid' => $record->id,
+            'fieldid' => $channelsfield->id,
+        ]);
+        if (empty($channelsvalue)) {
+            return self::get_fallback_reviewers();
+        }
+
+        $channelitems = array_filter(array_map('trim', preg_split('/\r?\n/', $channelsvalue)));
+        if (empty($channelitems)) {
+            return self::get_fallback_reviewers();
+        }
+
+        $fieldname = $data->name . '审批';
+        $userfield = $DB->get_record('user_info_field', ['name' => $fieldname]);
+        if (!$userfield) {
+            return self::get_fallback_reviewers();
+        }
+
+        $userdatas = $DB->get_records('user_info_data', ['fieldid' => $userfield->id]);
+        foreach ($userdatas as $userdata) {
+            $useritems = array_filter(array_map('trim', preg_split('/\r?\n/', $userdata->content)));
+            $matched = array_intersect($channelitems, $useritems);
+            if (!empty($matched)) {
+                $reviewerids[] = (int)$userdata->userid;
             }
+        }
+
+        $reviewerids = array_values(array_unique(array_filter($reviewerids)));
+        if (empty($reviewerids)) {
+            return self::get_fallback_reviewers();
+        }
+
+        return $reviewerids;
+    }
+
+    private static function get_fallback_reviewers(): array {
+        global $DB;
+
+        $reviewerids = [];
+        $admins = get_admins();
+        foreach ($admins as $admin) {
+            $reviewerids[] = (int)$admin->id;
         }
 
         return array_values(array_unique(array_filter($reviewerids)));
