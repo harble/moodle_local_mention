@@ -45,5 +45,29 @@ function xmldb_local_mention_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082201, 'local', 'mention');
     }
 
+    if ($oldversion < 2026082202) {
+        $table = new xmldb_table('local_mention_notify_queue');
+
+        if ($dbman->table_exists($table)) {
+            $oldindex = new xmldb_index('uniq_pending', XMLDB_INDEX_UNIQUE, ['component', 'itemtype', 'itemid', 'userto', 'notiftype', 'status']);
+            if ($dbman->index_exists($table, $oldindex)) {
+                $dbman->drop_index($table, $oldindex);
+            }
+
+            $usertoindex = new xmldb_index('userto', XMLDB_INDEX_NOTUNIQUE, ['userto']);
+            if ($dbman->index_exists($table, $usertoindex)) {
+                $dbman->drop_index($table, $usertoindex);
+            }
+
+            $field = new xmldb_field('userto', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+            $dbman->change_field_type($table, $field);
+
+            $newindex = new xmldb_index('uniq_pending', XMLDB_INDEX_UNIQUE, ['component', 'itemtype', 'itemid', 'notiftype', 'seq', 'status']);
+            $dbman->add_index($table, $newindex);
+        }
+
+        upgrade_plugin_savepoint(true, 2026082202, 'local', 'mention');
+    }
+
     return true;
 }

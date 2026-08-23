@@ -42,7 +42,7 @@
         <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="userfrom" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="userto" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userto" TYPE="text" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="notiftype" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="seq" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
         <FIELD NAME="subject" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
@@ -63,7 +63,7 @@
         <INDEX NAME="scheduledtime" UNIQUE="false" FIELDS="scheduledtime"/>
         <INDEX NAME="userto" UNIQUE="false" FIELDS="userto"/>
         <INDEX NAME="compitem" UNIQUE="false" FIELDS="component, itemtype, itemid"/>
-        <INDEX NAME="uniq_pending" UNIQUE="true" FIELDS="component, itemtype, itemid, userto, notiftype, status"/>
+        <INDEX NAME="uniq_pending" UNIQUE="true" FIELDS="component, itemtype, itemid, notiftype, seq, status"/>
       </INDEXES>
     </TABLE>
   </TABLES>

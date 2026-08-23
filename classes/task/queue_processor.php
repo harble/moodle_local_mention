@@ -38,7 +38,7 @@ class queue_processor extends \core\task\scheduled_task {
     }
 
     private function send_notification(\stdClass $record): void {
-        global $DB, $USER;
+        global $DB;
 
         $record = $DB->get_record('local_mention_notify_queue', ['id' => $record->id]);
         if (!$record || (int)$record->status != 0) {
@@ -54,50 +54,65 @@ class queue_processor extends \core\task\scheduled_task {
             return;
         }
 
-        $userto = $DB->get_record('user', ['id' => $record->userto]);
-        $userfrom = $DB->get_record('user', ['id' => $record->userfrom]);
-
-        if (!$userto) {
-            $DB->update_record('local_mention_notify_queue', [
-                'id' => $record->id,
-                'status' => 3,
-                'timemodified' => time(),
-            ]);
-            return;
+        $userids = json_decode($record->userto, true);
+        if (!is_array($userids)) {
+            $userids = [(int)$record->userto];
         }
 
+        $userfrom = $DB->get_record('user', ['id' => $record->userfrom]);
         if (!$userfrom) {
             $userfrom = \core_user::get_noreply_user();
         }
 
-        $message = new \core\message\message();
-        $message->component = 'local_mention';
-        $message->name = 'mentions';
-        $message->notification = 1;
-        $message->userfrom = $userfrom;
-        $message->userto = $userto;
-        $message->subject = $record->subject ?: '';
-        $message->fullmessage = $record->content ?: '';
-        $message->fullmessageformat = FORMAT_HTML;
-        $message->fullmessagehtml = $record->content ?: '';
-        $message->smallmessage = $record->subject ?: '';
+        $hassuccess = false;
+        $hasfailure = false;
 
-        $payload = json_decode($record->payload ?: '', true);
-        if (is_array($payload) && !empty($payload['url'])) {
-            $message->contexturl = $payload['url'];
-            $message->contexturlname = $record->subject ?: get_string('notification');
+        foreach ($userids as $uid) {
+            $uid = (int)$uid;
+            if ($uid <= 0) {
+                continue;
+            }
+
+            $userto = $DB->get_record('user', ['id' => $uid]);
+            if (!$userto) {
+                $hasfailure = true;
+                continue;
+            }
+
+            $message = new \core\message\message();
+            $message->component = 'local_mention';
+            $message->name = 'mentions';
+            $message->notification = 1;
+            $message->userfrom = $userfrom;
+            $message->userto = $userto;
+            $message->subject = $record->subject ?: '';
+            $message->fullmessage = $record->content ?: '';
+            $message->fullmessageformat = FORMAT_HTML;
+            $message->fullmessagehtml = $record->content ?: '';
+            $message->smallmessage = $record->subject ?: '';
+
+            $payload = json_decode($record->payload ?: '', true);
+            if (is_array($payload) && !empty($payload['url'])) {
+                $message->contexturl = $payload['url'];
+                $message->contexturlname = $record->subject ?: get_string('notification');
+            }
+
+            $result = message_send($message);
+            if ($result) {
+                $hassuccess = true;
+            } else {
+                $hasfailure = true;
+            }
         }
 
-        $result = message_send($message);
-
-        if ($result) {
+        if ($hassuccess) {
             $DB->update_record('local_mention_notify_queue', [
                 'id' => $record->id,
                 'status' => 1,
                 'senttime' => time(),
                 'timemodified' => time(),
             ]);
-        } else {
+        } elseif ($hasfailure) {
             $retrycount = (int)$record->retrycount + 1;
             if ($retrycount >= 3) {
                 $DB->update_record('local_mention_notify_queue', [
@@ -156,7 +171,7 @@ class queue_processor extends \core\task\scheduled_task {
                 WHERE r.component = 'mod_data'
                   AND r.itemtype = 'data_record'
                   AND dr.approved = 0
-                ORDER BY r.itemid, r.userto, r.seq";
+                ORDER BY r.itemid, r.seq";
         $allrecords = $DB->get_records_sql($sql);
 
         if (empty($allrecords)) {
@@ -165,11 +180,15 @@ class queue_processor extends \core\task\scheduled_task {
 
         $grouped = [];
         foreach ($allrecords as $r) {
-            $key = $r->itemid . '_' . $r->userto;
+            $key = $r->itemid;
             if (!isset($grouped[$key])) {
+                $userids = json_decode($r->userto, true);
+                if (!is_array($userids)) {
+                    $userids = [(int)$r->userto];
+                }
                 $grouped[$key] = [
                     'itemid' => $r->itemid,
-                    'userto' => $r->userto,
+                    'userto' => $userids,
                     'courseid' => $r->courseid,
                     'contextid' => $r->contextid,
                     'userfrom' => $r->userfrom,
@@ -200,6 +219,9 @@ class queue_processor extends \core\task\scheduled_task {
             $submitter = $DB->get_record('user', ['id' => $datarecord->userid]);
             $submittername = $submitter ? fullname($submitter) : get_string('user');
 
+            $data = $DB->get_record('data', ['id' => $cm->instance]);
+            $dataname = $data ? $data->name : 'Database';
+
             $url = (string)(new \moodle_url('/mod/data/view.php', ['id' => $cm->id]))->out() . '#record-' . $info['itemid'];
 
             for ($seq = $info['maxseq'] + 1; $seq <= $shouldnotify; $seq++) {
@@ -207,6 +229,7 @@ class queue_processor extends \core\task\scheduled_task {
                     'cmid' => (int)$cm->id,
                     'recordid' => (int)$info['itemid'],
                     'submitter' => $submittername,
+                    'dataname' => $dataname,
                     'url' => $url,
                     'seq' => $seq,
                     'elapseddays' => floor($elapsed / DAYSECS),
@@ -219,11 +242,15 @@ class queue_processor extends \core\task\scheduled_task {
                     'contextid' => (int)$info['contextid'],
                     'courseid' => (int)$info['courseid'],
                     'userfrom' => (int)$info['userfrom'],
-                    'userto' => (int)$info['userto'],
+                    'userto' => json_encode($info['userto']),
                     'notiftype' => 'data_review',
                     'seq' => $seq,
-                    'subject' => get_string('datareviewremindersubject', 'local_mention', $seq),
+                    'subject' => get_string('datareviewremindersubject', 'local_mention', [
+                        'dataname' => $dataname,
+                        'seq' => $seq,
+                    ]),
                     'content' => get_string('datareviewremindercontent', 'local_mention', [
+                        'dataname' => $dataname,
                         'seq' => $seq,
                         'submitter' => $submittername,
                         'elapseddays' => floor($elapsed / DAYSECS),

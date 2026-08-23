@@ -39,14 +39,38 @@ class database_observer {
         $submitter = $DB->get_record('user', ['id' => $record->userid]);
         $submittername = $submitter ? fullname($submitter) : get_string('user');
 
+        $data = $DB->get_record('data', ['id' => $cm->instance]);
+        $dataname = $data ? $data->name : 'Database';
+
         $context = \context_module::instance($cm->id);
         $url = (string)$event->get_url()->out();
 
-        foreach ($reviewerids as $reviewerid) {
-            if ($reviewerid == $record->userid) {
-                continue;
-            }
+        $pendingrecords = $DB->get_records('local_mention_notify_queue', [
+            'component' => 'mod_data',
+            'itemtype' => 'data_record',
+            'itemid' => $record->id,
+            'notiftype' => 'data_review',
+            'status' => 0,
+        ]);
 
+        foreach ($pendingrecords as $pending) {
+            $DB->update_record('local_mention_notify_queue', [
+                'id' => $pending->id,
+                'userto' => json_encode($reviewerids),
+                'subject' => get_string('datareviewsubject', 'local_mention', [
+                    'dataname' => $dataname,
+                    'submitter' => $submittername,
+                ]),
+                'content' => get_string('datareviewcontent', 'local_mention', [
+                    'dataname' => $dataname,
+                    'submitter' => $submittername,
+                    'url' => $url,
+                ]),
+                'timemodified' => time(),
+            ]);
+        }
+
+        if (empty($pendingrecords)) {
             self::enqueue_notification([
                 'component' => 'mod_data',
                 'itemtype' => 'data_record',
@@ -54,11 +78,15 @@ class database_observer {
                 'contextid' => (int)$context->id,
                 'courseid' => (int)$cm->course,
                 'userfrom' => (int)$record->userid,
-                'userto' => (int)$reviewerid,
+                'userto' => json_encode($reviewerids),
                 'notiftype' => 'data_review',
                 'seq' => 1,
-                'subject' => get_string('datareviewsubject', 'local_mention', $submittername),
+                'subject' => get_string('datareviewsubject', 'local_mention', [
+                    'dataname' => $dataname,
+                    'submitter' => $submittername,
+                ]),
                 'content' => get_string('datareviewcontent', 'local_mention', [
+                    'dataname' => $dataname,
                     'submitter' => $submittername,
                     'url' => $url,
                 ]),
@@ -66,6 +94,7 @@ class database_observer {
                     'cmid' => (int)$cm->id,
                     'recordid' => (int)$record->id,
                     'submitter' => $submittername,
+                    'dataname' => $dataname,
                     'url' => $url,
                 ]),
                 'scheduledtime' => time(),
@@ -99,12 +128,19 @@ class database_observer {
             return self::get_fallback_reviewers();
         }
 
-        $channelitems = array_filter(array_map('trim', preg_split('/\r?\n/', $channelsvalue)));
+        $channelitems = array_values(array_filter(array_map('trim', preg_split('/##/', $channelsvalue))));
+        $normalizecb = function($v) {
+            $v = str_replace(['\\', '／', '＼'], '/', $v);
+            $v = preg_replace('/\s+/', '', $v);
+            return $v;
+        };
+        $channelitems = array_values(array_map($normalizecb, $channelitems));
         if (empty($channelitems)) {
             return self::get_fallback_reviewers();
         }
 
         $fieldname = $data->name . '审批';
+
         $userfield = $DB->get_record('user_info_field', ['name' => $fieldname]);
         if (!$userfield) {
             return self::get_fallback_reviewers();
@@ -112,8 +148,15 @@ class database_observer {
 
         $userdatas = $DB->get_records('user_info_data', ['fieldid' => $userfield->id]);
         foreach ($userdatas as $userdata) {
-            $useritems = array_filter(array_map('trim', preg_split('/\r?\n/', $userdata->content)));
-            $matched = array_intersect($channelitems, $useritems);
+            $rawdata = $userdata->data;
+            if ((int)$userdata->dataformat === 1) {
+                $rawdata = preg_replace('/<br\s*\/?>/i', "\n", $rawdata);
+                $rawdata = preg_replace('/<\/(p|div|li|h[1-6]|tr)>/i', "\n", $rawdata);
+                $rawdata = strip_tags($rawdata);
+            }
+            $lines = array_filter(array_map('trim', preg_split('/\r?\n/', $rawdata)));
+            $normalizedlines = array_values(array_map($normalizecb, $lines));
+            $matched = array_intersect($channelitems, $normalizedlines);
             if (!empty($matched)) {
                 $reviewerids[] = (int)$userdata->userid;
             }
@@ -123,6 +166,10 @@ class database_observer {
         if (empty($reviewerids)) {
             return self::get_fallback_reviewers();
         }
+
+        $reviewerids = array_values(array_filter($reviewerids, function($id) use ($record) {
+            return $id != $record->userid;
+        }));
 
         return $reviewerids;
     }
@@ -149,8 +196,8 @@ class database_observer {
             'component' => $data['component'],
             'itemtype' => $data['itemtype'],
             'itemid' => $data['itemid'],
-            'userto' => $data['userto'],
             'notiftype' => $data['notiftype'],
+            'seq' => $data['seq'],
             'status' => 0,
         ]);
 
