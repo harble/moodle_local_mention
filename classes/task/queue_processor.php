@@ -24,6 +24,12 @@ defined('MOODLE_INTERNAL') || die();
  */
 class queue_processor extends \core\task\scheduled_task {
 
+/*
+// 临时测试常量
+const PERIODIC_INTERVAL = 5 * MINSECS;     // 5分钟 instead of 7天
+const MAX_NOTIFICATIONS = 4;
+const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
+*/
     // 提醒间隔：每7天触发一次
     const PERIODIC_INTERVAL = 7 * DAYSECS;
     // 最大通知次数：初始 + 3次提醒 = 共4次
@@ -360,6 +366,12 @@ class queue_processor extends \core\task\scheduled_task {
 
             // 从 maxseq+1 开始，逐个生成缺失的提醒记录
             for ($seq = $info['maxseq'] + 1; $seq <= $shouldnotify; $seq++) {
+                // 每条提醒按间隔分散发送：第一条立即发送，后续每条间隔一个周期
+                $scheduledtime = $now + ($seq - $info['maxseq'] - 1) * self::PERIODIC_INTERVAL;
+                // 计算该条提醒对应的待审核天数（基于 scheduledtime 而非当前时间）
+                $seqelapsed = $scheduledtime - $info['recordcreated'];
+                $elapseddays = max(0, floor($seqelapsed / DAYSECS));
+
                 $payload = [
                     'cmid' => (int)$cm->id,
                     'recordid' => (int)$info['itemid'],
@@ -367,7 +379,7 @@ class queue_processor extends \core\task\scheduled_task {
                     'dataname' => $dataname,
                     'url' => $url,
                     'seq' => $seq,
-                    'elapseddays' => floor($elapsed / DAYSECS),
+                    'elapseddays' => $elapseddays,
                 ];
 
                 try {
@@ -389,12 +401,12 @@ class queue_processor extends \core\task\scheduled_task {
                             'dataname' => $dataname,
                             'seq' => $seq,
                             'submitter' => $submittername,
-                            'elapseddays' => floor($elapsed / DAYSECS),
+                            'elapseddays' => $elapseddays,
                             'url' => $url,
                         ]),
                         'payload' => json_encode($payload),
                         'status' => 0,
-                        'scheduledtime' => $now,
+                        'scheduledtime' => $scheduledtime,
                         'retrycount' => 0,
                         'timecreated' => $now,
                         'timemodified' => $now,
