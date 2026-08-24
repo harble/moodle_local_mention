@@ -171,8 +171,11 @@ class queue_processor extends \core\task\scheduled_task {
                 WHERE r.component = 'mod_data'
                   AND r.itemtype = 'data_record'
                   AND dr.approved = 0
+                  AND r.seq >= 1
+                  AND r.status != 3
+                  AND r.timecreated >= ?
                 ORDER BY r.itemid, r.seq";
-        $allrecords = $DB->get_records_sql($sql);
+        $allrecords = $DB->get_records_sql($sql, [$now - 45 * DAYSECS]);
 
         if (empty($allrecords)) {
             return;
@@ -201,7 +204,7 @@ class queue_processor extends \core\task\scheduled_task {
 
         foreach ($grouped as $key => $info) {
             $elapsed = $now - $info['recordcreated'];
-            $shouldnotify = min(floor($elapsed / $interval), $maxnotify);
+            $shouldnotify = min(floor($elapsed / $interval) + 1, $maxnotify + 1);
 
             if ($shouldnotify <= $info['maxseq']) {
                 continue;
@@ -213,6 +216,22 @@ class queue_processor extends \core\task\scheduled_task {
             }
             $datarecord = $DB->get_record('data_records', ['id' => $info['itemid']]);
             if (!$datarecord) {
+                continue;
+            }
+
+            if ((int)$datarecord->approved != 0) {
+                continue;
+            }
+
+            $tags = \core_tag_tag::get_item_tags_array('mod_data', 'data_records', $info['itemid']);
+            $hasdraft = false;
+            foreach ($tags as $tagname) {
+                if (stripos($tagname, 'draft') !== false) {
+                    $hasdraft = true;
+                    break;
+                }
+            }
+            if ($hasdraft) {
                 continue;
             }
 
@@ -235,34 +254,41 @@ class queue_processor extends \core\task\scheduled_task {
                     'elapseddays' => floor($elapsed / DAYSECS),
                 ];
 
-                $DB->insert_record('local_mention_notify_queue', [
-                    'component' => 'mod_data',
-                    'itemtype' => 'data_record',
-                    'itemid' => (int)$info['itemid'],
-                    'contextid' => (int)$info['contextid'],
-                    'courseid' => (int)$info['courseid'],
-                    'userfrom' => (int)$info['userfrom'],
-                    'userto' => json_encode($info['userto']),
-                    'notiftype' => 'data_review',
-                    'seq' => $seq,
-                    'subject' => get_string('datareviewremindersubject', 'local_mention', [
-                        'dataname' => $dataname,
+                try {
+                    $DB->insert_record('local_mention_notify_queue', [
+                        'component' => 'mod_data',
+                        'itemtype' => 'data_record',
+                        'itemid' => (int)$info['itemid'],
+                        'contextid' => (int)$info['contextid'],
+                        'courseid' => (int)$info['courseid'],
+                        'userfrom' => (int)$info['userfrom'],
+                        'userto' => json_encode($info['userto']),
+                        'notiftype' => 'data_review',
                         'seq' => $seq,
-                    ]),
-                    'content' => get_string('datareviewremindercontent', 'local_mention', [
-                        'dataname' => $dataname,
-                        'seq' => $seq,
-                        'submitter' => $submittername,
-                        'elapseddays' => floor($elapsed / DAYSECS),
-                        'url' => $url,
-                    ]),
-                    'payload' => json_encode($payload),
-                    'status' => 0,
-                    'scheduledtime' => $now,
-                    'retrycount' => 0,
-                    'timecreated' => $now,
-                    'timemodified' => $now,
-                ]);
+                        'subject' => get_string('datareviewremindersubject', 'local_mention', [
+                            'dataname' => $dataname,
+                            'seq' => $seq,
+                        ]),
+                        'content' => get_string('datareviewremindercontent', 'local_mention', [
+                            'dataname' => $dataname,
+                            'seq' => $seq,
+                            'submitter' => $submittername,
+                            'elapseddays' => floor($elapsed / DAYSECS),
+                            'url' => $url,
+                        ]),
+                        'payload' => json_encode($payload),
+                        'status' => 0,
+                        'scheduledtime' => $now,
+                        'retrycount' => 0,
+                        'timecreated' => $now,
+                        'timemodified' => $now,
+                    ]);
+                } catch (\dml_write_exception $e) {
+                    if (strpos($e->getMessage(), 'uniq_pending') !== false) {
+                        continue;
+                    }
+                    throw $e;
+                }
             }
         }
     }

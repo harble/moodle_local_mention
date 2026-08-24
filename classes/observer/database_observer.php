@@ -70,7 +70,19 @@ class database_observer {
             ]);
         }
 
-        if (empty($pendingrecords)) {
+        $DB->execute("UPDATE {local_mention_notify_queue} SET seq = -id WHERE component = ? AND itemtype = ? AND itemid = ? AND notiftype = ? AND seq >= 1 AND status != 0",
+            ['mod_data', 'data_record', $record->id, 'data_review']);
+
+        $hasactiveseq1 = false;
+        foreach ($pendingrecords as $pending) {
+            if ((int)$pending->seq === 1) {
+                $hasactiveseq1 = true;
+                break;
+            }
+        }
+
+        if (!$hasactiveseq1) {
+
             self::enqueue_notification([
                 'component' => 'mod_data',
                 'itemtype' => 'data_record',

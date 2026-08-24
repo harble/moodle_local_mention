@@ -61,9 +61,8 @@
       <INDEXES>
         <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
         <INDEX NAME="scheduledtime" UNIQUE="false" FIELDS="scheduledtime"/>
-        <INDEX NAME="userto" UNIQUE="false" FIELDS="userto"/>
         <INDEX NAME="compitem" UNIQUE="false" FIELDS="component, itemtype, itemid"/>
-        <INDEX NAME="uniq_pending" UNIQUE="true" FIELDS="component, itemtype, itemid, notiftype, seq, status"/>
+        <INDEX NAME="uniq_pending" UNIQUE="true" FIELDS="component, itemtype, itemid, notiftype, seq"/>
       </INDEXES>
     </TABLE>
   </TABLES>

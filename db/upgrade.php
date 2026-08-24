@@ -69,5 +69,41 @@ function xmldb_local_mention_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082202, 'local', 'mention');
     }
 
+    if ($oldversion < 2026082203) {
+        $table = new xmldb_table('local_mention_notify_queue');
+
+        if ($dbman->table_exists($table)) {
+            $oldindexes = [
+                new xmldb_index('uniq_pending', XMLDB_INDEX_UNIQUE, ['component', 'itemtype', 'itemid', 'notiftype', 'seq', 'status']),
+                new xmldb_index('uniq_pending', XMLDB_INDEX_UNIQUE, ['component', 'itemtype', 'itemid', 'notiftype', 'seq']),
+                new xmldb_index('uniq_pending', XMLDB_INDEX_UNIQUE, ['component', 'itemtype', 'itemid', 'userto', 'notiftype', 'status']),
+            ];
+            foreach ($oldindexes as $oldindex) {
+                if ($dbman->index_exists($table, $oldindex)) {
+                    $dbman->drop_index($table, $oldindex);
+                }
+            }
+
+            $usertoindex = new xmldb_index('userto', XMLDB_INDEX_NOTUNIQUE, ['userto']);
+            if ($dbman->index_exists($table, $usertoindex)) {
+                $dbman->drop_index($table, $usertoindex);
+            }
+
+            $duplicates = $DB->get_records_sql("SELECT id FROM {local_mention_notify_queue} WHERE id NOT IN (
+                SELECT mx.maxid FROM (
+                    SELECT MAX(id) AS maxid FROM {local_mention_notify_queue} GROUP BY component, itemtype, itemid, notiftype, seq
+                ) AS mx
+            )");
+            foreach ($duplicates as $dup) {
+                $DB->delete_records('local_mention_notify_queue', ['id' => $dup->id]);
+            }
+
+            $newindex = new xmldb_index('uniq_pending', XMLDB_INDEX_UNIQUE, ['component', 'itemtype', 'itemid', 'notiftype', 'seq']);
+            $dbman->add_index($table, $newindex);
+        }
+
+        upgrade_plugin_savepoint(true, 2026082203, 'local', 'mention');
+    }
+
     return true;
 }
