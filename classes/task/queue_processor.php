@@ -6,6 +6,10 @@ defined('MOODLE_INTERNAL') || die();
 
 class queue_processor extends \core\task\scheduled_task {
 
+    const PERIODIC_INTERVAL = 7 * DAYSECS;
+    const MAX_NOTIFICATIONS = 4;
+    const QUERY_TIME_WINDOW = 45 * DAYSECS;
+
     public function get_name(): string {
         return 'local_mention notification queue processor';
     }
@@ -161,8 +165,6 @@ class queue_processor extends \core\task\scheduled_task {
     private function generate_periodic_reminders(): void {
         global $DB;
 
-        $maxnotify = 3;
-        $interval = 7 * DAYSECS;
         $now = time();
 
         $sql = "SELECT DISTINCT r.*, dr.approved, dr.timecreated AS recordcreated
@@ -175,7 +177,7 @@ class queue_processor extends \core\task\scheduled_task {
                   AND r.status != 3
                   AND r.timecreated >= ?
                 ORDER BY r.itemid, r.seq";
-        $allrecords = $DB->get_records_sql($sql, [$now - 45 * DAYSECS]);
+        $allrecords = $DB->get_records_sql($sql, [$now - self::QUERY_TIME_WINDOW]);
 
         if (empty($allrecords)) {
             return;
@@ -184,14 +186,12 @@ class queue_processor extends \core\task\scheduled_task {
         $grouped = [];
         foreach ($allrecords as $r) {
             $key = $r->itemid;
+            $seq = (int)$r->seq;
+
             if (!isset($grouped[$key])) {
-                $userids = json_decode($r->userto, true);
-                if (!is_array($userids)) {
-                    $userids = [(int)$r->userto];
-                }
                 $grouped[$key] = [
                     'itemid' => $r->itemid,
-                    'userto' => $userids,
+                    'userto' => [],
                     'courseid' => $r->courseid,
                     'contextid' => $r->contextid,
                     'userfrom' => $r->userfrom,
@@ -199,12 +199,19 @@ class queue_processor extends \core\task\scheduled_task {
                     'maxseq' => 0,
                 ];
             }
-            $grouped[$key]['maxseq'] = max($grouped[$key]['maxseq'], (int)$r->seq);
+
+            $userids = json_decode($r->userto, true);
+            if (!is_array($userids)) {
+                $userids = [(int)$r->userto];
+            }
+            $grouped[$key]['userto'] = $userids;
+
+            $grouped[$key]['maxseq'] = max($grouped[$key]['maxseq'], $seq);
         }
 
         foreach ($grouped as $key => $info) {
             $elapsed = $now - $info['recordcreated'];
-            $shouldnotify = min(floor($elapsed / $interval) + 1, $maxnotify + 1);
+            $shouldnotify = min(floor($elapsed / self::PERIODIC_INTERVAL) + 1, self::MAX_NOTIFICATIONS);
 
             if ($shouldnotify <= $info['maxseq']) {
                 continue;
