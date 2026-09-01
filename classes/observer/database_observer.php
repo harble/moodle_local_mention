@@ -8,19 +8,25 @@ defined('MOODLE_INTERNAL') || die();
  * Database 活动模块事件观察者
  *
  * 监听 mod_data\event\record_created 和 record_updated 事件，
- * 当学生提交/更新待审核条目时，自动通知相关审核人员。
+ * 实现两大功能：
  *
- * 核心流程（handle_record_event）：
- * 1. 检查条目是否仍为待审核状态（approved=0）
- * 2. 解析审核人列表（resolve_reviewer_ids）
- *    - 根据条目的 channels 字段值，匹配用户自定义字段中的审核人配置
- *    - 匹配失败则使用系统管理员兜底
- * 3. 更新现有待发送记录（status=0）的审核人列表和内容
- *    - 应对审核人变更场景
- * 4. 退休已发送/已取消的旧记录（seq 设为 -id）
- *    - 确保唯一键不冲突
- * 5. 如果没有活跃的 seq=1 记录，则创建新的初始通知
- *    - 每次更新都重置提醒周期
+ * 一、审核通知
+ *   当学生提交/更新待审核条目时，自动通知相关审核人员。
+ *   核心流程（handle_record_event）：
+ *   1. 本地化条目中的外部图片（见功能二）
+ *   2. 检查条目是否仍为待审核状态（approved=0）
+ *   3. 解析审核人列表（resolve_reviewer_ids）
+ *      - 根据条目的 channels 字段值，匹配用户自定义字段中的审核人配置
+ *      - 匹配失败则使用系统管理员兜底
+ *   4. 更新现有待发送记录（status=0）的审核人列表和内容
+ *   5. 退休已发送/已取消的旧记录（seq 设为 -id）
+ *   6. 如果没有活跃的 seq=1 记录，则创建新的初始通知
+ *
+ * 二、外部图片本地化
+ *   条目保存时自动提取 textarea 字段 HTML 中的外部 <img> 图片 URL，
+ *   下载到 Moodle 文件系统，替换为 @@PLUGINFILE@@ 本地引用。
+ *   这样即使原始图片 URL 失效，条目中的图片也不会丢失。
+ *   实现方法：localize_external_images()
  */
 class database_observer {
 
@@ -65,14 +71,17 @@ class database_observer {
             return;
         }
 
-        // 已审核的条目不再需要通知
-        if ((int)$record->approved != 0) {
-            return;
-        }
-
         // 获取课程模块信息
         $cm = $DB->get_record('course_modules', ['id' => $event->contextinstanceid]);
         if (!$cm) {
+            return;
+        }
+
+        // 本地化条目中的外部图片（所有条目都处理，不限于待审核状态）
+        self::localize_external_images($cm, $record);
+
+        // 已审核的条目不再需要通知
+        if ((int)$record->approved != 0) {
             return;
         }
 
@@ -172,6 +181,127 @@ class database_observer {
                 ]),
                 'scheduledtime' => time(),
             ]);
+        }
+    }
+
+    /**
+     * 本地化条目文本域中的外部图片
+     *
+     * 遍历条目中所有 textarea 类型字段的 HTML 内容，
+     * 提取 <img> 标签中的外部图片 URL（排除本站域名），
+     * 下载到 Moodle 文件系统，并替换为 @@PLUGINFILE@@ 本地引用。
+     *
+     * 这样即使原始图片 URL 失效，条目中的图片也不会丢失。
+     *
+     * @param \stdClass $cm 课程模块记录
+     * @param \stdClass $record 条目记录
+     */
+    private static function localize_external_images(\stdClass $cm, \stdClass $record): void {
+        global $DB, $CFG;
+
+        // 获取本站域名，用于排除本站图片
+        $sitehost = parse_url($CFG->wwwroot, PHP_URL_HOST);
+
+        // 获取该 Database 活动中所有 textarea 类型的字段
+        $fields = $DB->get_records('data_fields', [
+            'dataid' => $cm->instance,
+            'type' => 'textarea',
+        ]);
+        if (empty($fields)) {
+            return;
+        }
+
+        $fieldids = array_keys($fields);
+
+        // 获取该条目在这些字段上的所有内容
+        [$insql, $inparams] = $DB->get_in_or_equal($fieldids, SQL_PARAMS_NAMED);
+        $contents = $DB->get_records_select('data_content',
+            "recordid = :recordid AND fieldid $insql",
+            array_merge(['recordid' => $record->id], $inparams)
+        );
+        if (empty($contents)) {
+            return;
+        }
+
+        $fs = get_file_storage();
+        $context = \context_module::instance($cm->id);
+
+        foreach ($contents as $content) {
+            if (empty($content->content)) {
+                continue;
+            }
+
+            $html = $content->content;
+            $modified = false;
+
+            // 提取所有 <img> 标签的 src 属性
+            // 匹配模式：<img ... src="url" ...>
+            if (!preg_match_all('/<img[^>]+src\s*=\s*["\']([^"\']+)["\'][^>]*>/i', $html, $matches)) {
+                continue;
+            }
+
+            $urls = $matches[1];  // 所有 src 值
+            $fulltags = $matches[0];  // 完整的 <img> 标签
+
+            for ($i = 0; $i < count($urls); $i++) {
+                $url = $urls[$i];
+                $fulltag = $fulltags[$i];
+
+                // 跳过已经是 @@PLUGINFILE@@ 的本地引用
+                if (strpos($url, '@@PLUGINFILE@@') !== false) {
+                    continue;
+                }
+
+                // 跳过本站域名下的图片
+                $urlhost = parse_url($url, PHP_URL_HOST);
+                if ($urlhost && strcasecmp($urlhost, $sitehost) === 0) {
+                    continue;
+                }
+
+                // 跳过非 http/https 协议（data: URI 等）
+                if (!preg_match('/^https?:\/\//i', $url)) {
+                    continue;
+                }
+
+                // 提取文件名（从 URL 路径中获取，处理 query string）
+                $urlpath = parse_url($url, PHP_URL_PATH);
+                $originalname = $urlpath ? basename($urlpath) : 'image';
+                // 确保文件名有合理的扩展名
+                if (!preg_match('/\.(jpg|jpeg|png|gif|svg|webp|bmp|ico)$/i', $originalname)) {
+                    $originalname .= '.jpg';
+                }
+                // 加 hash 前缀避免文件名冲突
+                $filename = substr(md5($url), 0, 8) . '_' . $originalname;
+
+                try {
+                    $filerecord = [
+                        'contextid' => $context->id,
+                        'component' => 'mod_data',
+                        'filearea' => 'content',
+                        'itemid' => $content->id,
+                        'filepath' => '/',
+                        'filename' => $filename,
+                    ];
+
+                    $fs->create_file_from_url((object)$filerecord, $url);
+
+                    // 替换 HTML 中的外部 URL 为 @@PLUGINFILE@@ 引用
+                    $newtag = str_replace($url, '@@PLUGINFILE@@/' . rawurlencode($filename), $fulltag);
+                    $html = str_replace($fulltag, $newtag, $html);
+                    $modified = true;
+                } catch (\Exception $e) {
+                    // 下载失败时保留原始 URL，不中断流程
+                    debugging("local_mention: 下载外部图片失败: $url, 错误: " . $e->getMessage(), DEBUG_DEVELOPER);
+                }
+            }
+
+            // 如果有修改，更新数据库
+            if ($modified) {
+                $DB->update_record('data_content', [
+                    'id' => $content->id,
+                    'content' => $html,
+                ]);
+            }
         }
     }
 
