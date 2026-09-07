@@ -361,8 +361,8 @@ const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
             $data = $DB->get_record('data', ['id' => $cm->instance]);
             $dataname = $data ? $data->name : 'Database';
 
-            // 构建条目跳转链接
-            $url = (string)(new \moodle_url('/mod/data/view.php', ['id' => $cm->id]))->out() . '#record-' . $info['itemid'];
+            // 构建条目跳转链接（与初始通知保持一致：d=dataid, rid=recordid）
+            $url = (string)(new \moodle_url('/mod/data/view.php', ['d' => $cm->instance, 'rid' => $info['itemid']]))->out();
 
             // 从 maxseq+1 开始，逐个生成缺失的提醒记录
             for ($seq = $info['maxseq'] + 1; $seq <= $shouldnotify; $seq++) {
