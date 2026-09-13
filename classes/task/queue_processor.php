@@ -361,6 +361,13 @@ const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
             $data = $DB->get_record('data', ['id' => $cm->instance]);
             $dataname = $data ? $data->name : 'Database';
 
+            // 敏感词检查：扫描条目所有 textarea 字段的 HTML 内容
+            $matchedwords = \local_mention\observer\database_observer::check_sensitive_words($datarecord, $data);
+            $sensitivewarning = '';
+            if (!empty($matchedwords)) {
+                $sensitivewarning = get_string('sensitive_warning', 'local_mention', implode(', ', $matchedwords));
+            }
+
             // 构建条目跳转链接（与初始通知保持一致：d=dataid, rid=recordid）
             $url = (string)(new \moodle_url('/mod/data/view.php', ['d' => $cm->instance, 'rid' => $info['itemid']]))->out();
 
@@ -403,7 +410,7 @@ const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
                             'submitter' => $submittername,
                             'elapseddays' => $elapseddays,
                             'url' => $url,
-                        ]),
+                        ]) . $sensitivewarning,
                         'payload' => json_encode($payload),
                         'status' => 0,
                         'scheduledtime' => $scheduledtime,

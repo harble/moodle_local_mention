@@ -99,6 +99,13 @@ class database_observer {
         $data = $DB->get_record('data', ['id' => $cm->instance]);
         $dataname = $data ? $data->name : 'Database';
 
+        // 敏感词检查：扫描条目所有 textarea 字段的 HTML 内容
+        $matchedwords = self::check_sensitive_words($record, $data);
+        $sensitivewarning = '';
+        if (!empty($matchedwords)) {
+            $sensitivewarning = get_string('sensitive_warning', 'local_mention', implode(', ', $matchedwords));
+        }
+
         $context = \context_module::instance($cm->id);
         $url = (string)$event->get_url()->out();
 
@@ -127,7 +134,7 @@ class database_observer {
                     'dataname' => $dataname,
                     'submitter' => $submittername,
                     'url' => $url,
-                ]),
+                ]) . $sensitivewarning,
                 'timemodified' => time(),
             ]);
         }
@@ -171,7 +178,7 @@ class database_observer {
                     'dataname' => $dataname,
                     'submitter' => $submittername,
                     'url' => $url,
-                ]),
+                ]) . $sensitivewarning,
                 'payload' => json_encode([
                     'cmid' => (int)$cm->instance,
                     'recordid' => (int)$record->id,
@@ -303,6 +310,74 @@ class database_observer {
                 ]);
             }
         }
+    }
+
+    /**
+     * 检查条目内容中是否包含敏感词
+     *
+     * 读取插件配置中的敏感词列表（每行一个），
+     * 遍历条目所有 textarea 字段的 HTML 内容，
+     * 去除 HTML 标签后逐词匹配（不区分大小写）。
+     *
+     * @param \stdClass $record 条目记录
+     * @param \stdClass $data Database 活动记录（需含 id）
+     * @return array 命中的敏感词数组（无命中则返回空数组）
+     */
+    public static function check_sensitive_words(\stdClass $record, \stdClass $data): array {
+        global $DB;
+
+        // 读取敏感词配置
+        $keywordconfig = get_config('local_mention', 'sensitive_keywords');
+        if (empty($keywordconfig)) {
+            return [];
+        }
+
+        // 按行分割，每行一个敏感词
+        $keywords = preg_split('/[\r\n]+/', $keywordconfig);
+        $keywords = array_values(array_filter(array_map('trim', $keywords)));
+        if (empty($keywords)) {
+            return [];
+        }
+
+        // 获取该 Database 活动中所有 textarea 类型的字段
+        $fields = $DB->get_records('data_fields', [
+            'dataid' => $data->id,
+            'type' => 'textarea',
+        ]);
+        if (empty($fields)) {
+            return [];
+        }
+
+        // 获取该条目在这些字段上的所有内容
+        [$insql, $inparams] = $DB->get_in_or_equal(array_keys($fields), SQL_PARAMS_NAMED);
+        $contents = $DB->get_records_select('data_content',
+            "recordid = :recordid AND fieldid $insql",
+            array_merge(['recordid' => $record->id], $inparams)
+        );
+        if (empty($contents)) {
+            return [];
+        }
+
+        // 拼接所有字段的纯文本
+        $fulltext = '';
+        foreach ($contents as $content) {
+            if (!empty($content->content)) {
+                // 将 <br> 等换行标签转换为空格，再去除 HTML 标签
+                $text = preg_replace('/<br\s*\/?>/i', "\n", $content->content);
+                $text = strip_tags($text);
+                $fulltext .= "\n" . $text;
+            }
+        }
+
+        // 逐词匹配（不区分大小写）
+        $matched = [];
+        foreach ($keywords as $keyword) {
+            if ($keyword !== '' && stripos($fulltext, $keyword) !== false) {
+                $matched[] = $keyword;
+            }
+        }
+
+        return $matched;
     }
 
     /**

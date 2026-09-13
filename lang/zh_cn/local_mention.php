@@ -16,3 +16,6 @@ $string['datareviewsubject'] = '{$a->dataname}待审核：{$a->submitter} 提交
 $string['datareviewcontent'] = '用户 {$a->submitter} 在{$a->dataname}中提交了待审核的内容，请查看：{$a->url}';
 $string['datareviewremindersubject'] = '{$a->dataname}待审核第{$a->seq}次提醒';
 $string['datareviewremindercontent'] = '【第{$a->seq}次提醒】用户 {$a->submitter} 在{$a->dataname}中提交的内容已待审核 {$a->elapseddays} 天，请尽快处理：{$a->url}';
+$string['sensitive_keywords'] = '敏感词关键字';
+$string['sensitive_keywords_desc'] = '每行输入一个敏感词，不区分大小写。当 Database 活动条目内容包含设置的敏感词时，审核通知中会自动附加敏感词警告提示。';
+$string['sensitive_warning'] = "\n\n" . '⚠️ 请留意！条目中包含敏感词：{$a}';
