@@ -19,3 +19,5 @@ $string['datareviewremindercontent'] = '【第{$a->seq}次提醒】用户 {$a->s
 $string['sensitive_keywords'] = '敏感词关键字';
 $string['sensitive_keywords_desc'] = '每行输入一个敏感词，不区分大小写。当 Database 活动条目内容包含设置的敏感词时，审核通知中会自动附加敏感词警告提示。';
 $string['sensitive_warning'] = "\n\n" . '⚠️ 请留意！条目中包含敏感词：{$a}';
+$string['auto_approve_databases'] = '自动内容审批';
+$string['auto_approve_databases_desc'] = '选择需要自动内容审批的 Database 活动（可多选）。当选中活动的条目内容不包含敏感词时，系统会自动完成审核，无需人工介入。';

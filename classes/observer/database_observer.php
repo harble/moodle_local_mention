@@ -63,7 +63,7 @@ class database_observer {
      *    - 如果不存在，则创建新的初始通知，重置提醒周期
      */
     private static function handle_record_event($event): void {
-        global $DB;
+        global $DB, $CFG;
 
         // 获取条目数据
         $record = $DB->get_record('data_records', ['id' => $event->objectid]);
@@ -104,6 +104,27 @@ class database_observer {
         $sensitivewarning = '';
         if (!empty($matchedwords)) {
             $sensitivewarning = get_string('sensitive_warning', 'local_mention', implode(', ', $matchedwords));
+        }
+
+        // 自动内容审批检查
+        // 如果该 Database 活动已配置自动内容审批，且条目内容无敏感词，则自动完成审核，跳过通知流程
+        $autoapprovedatabases = get_config('local_mention', 'auto_approve_databases');
+        if (!empty($autoapprovedatabases)) {
+            $autoapproveids = explode(',', $autoapprovedatabases);
+            $autoapproveids = array_map('trim', $autoapproveids);
+            if (!empty($cm->instance) && in_array((string)$cm->instance, $autoapproveids, true) && empty($matchedwords)) {
+                require_once($CFG->dirroot . '/mod/data/locallib.php');
+                data_approve_entry($record->id, true);
+
+                // 退休该条目所有待发送的队列通知，避免队列处理器做无用功
+                $DB->execute(
+                    "UPDATE {local_mention_notify_queue}
+                        SET seq = -id, status = 3, timemodified = ?
+                      WHERE component = ? AND itemtype = ? AND itemid = ? AND status = 0",
+                    [time(), 'mod_data', 'data_record', $record->id]
+                );
+                return;
+            }
         }
 
         $context = \context_module::instance($cm->id);
