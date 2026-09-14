@@ -24,21 +24,40 @@ defined('MOODLE_INTERNAL') || die();
  */
 class queue_processor extends \core\task\scheduled_task {
 
-/*
-// 临时测试常量
-const PERIODIC_INTERVAL = 5 * MINSECS;     // 5分钟 instead of 7天
-const MAX_NOTIFICATIONS = 4;
-const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
-*/
-    // 提醒间隔：每7天触发一次
-    const PERIODIC_INTERVAL = 7 * DAYSECS;
-    // 最大通知次数：初始 + 3次提醒 = 共4次
-    const MAX_NOTIFICATIONS = 4;
-    // 查询时间窗口：只查询45天内创建的通知记录，避免全表扫描
-    const QUERY_TIME_WINDOW = 45 * DAYSECS;
+    // 默认值（当配置项未设置时作为降级使用）
+    const DEFAULT_PERIODIC_INTERVAL = 7 * DAYSECS;
+    const DEFAULT_MAX_NOTIFICATIONS = 4;
+    const DEFAULT_QUERY_TIME_WINDOW = 45 * DAYSECS;
 
     public function get_name(): string {
         return 'local_mention notification queue processor';
+    }
+
+    /**
+     * 获取配置中的提醒间隔（秒），未配置时使用默认值
+     */
+    private static function get_periodic_interval(): int {
+        $seconds = get_config('local_mention', 'reminder_interval');
+        return ($seconds !== false && $seconds !== '') ? (int)$seconds : self::DEFAULT_PERIODIC_INTERVAL;
+    }
+
+    /**
+     * 获取配置中的最大通知次数，未配置时使用默认值
+     */
+    private static function get_max_notifications(): int {
+        $max = get_config('local_mention', 'max_notifications');
+        return ($max !== false && $max !== '') ? max(1, (int)$max) : self::DEFAULT_MAX_NOTIFICATIONS;
+    }
+
+    /**
+     * 计算查询时间窗口（秒）：基于提醒间隔和最大次数自动推算，确保覆盖全周期
+     */
+    private static function get_query_time_window(): int {
+        $interval = self::get_periodic_interval();
+        $max = self::get_max_notifications();
+        // 保险窗口 = 周期间隔 × (最大次数 + 2)，且不低于 45 天
+        $window = max(45 * DAYSECS, $interval * ($max + 2));
+        return $window;
     }
 
     /**
@@ -259,12 +278,15 @@ const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
         global $DB;
 
         $now = time();
+        $periodicinterval = self::get_periodic_interval();
+        $maxnotifications = self::get_max_notifications();
+        $querytimewindow = self::get_query_time_window();
 
         // 查询活跃通知记录：
         // - JOIN data_records 过滤已审核的条目（数据库层面先过滤，减少PHP处理量）
         // - status!=3 排除已取消的记录（草稿期间被取消的）
         // - seq>=1 排除退休记录（seq为负数的）
-        // - timecreated>=45天 限制时间窗口，避免全表扫描
+        // - timecreated>=窗口时间 限制时间窗口，避免全表扫描
         $sql = "SELECT DISTINCT r.*, dr.approved, dr.timecreated AS recordcreated
                 FROM {local_mention_notify_queue} r
                 JOIN {data_records} dr ON dr.id = r.itemid
@@ -275,7 +297,7 @@ const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
                   AND r.status != 3
                   AND r.timecreated >= ?
                 ORDER BY r.itemid, r.seq";
-        $allrecords = $DB->get_records_sql($sql, [$now - self::QUERY_TIME_WINDOW]);
+        $allrecords = $DB->get_records_sql($sql, [$now - $querytimewindow]);
 
         if (empty($allrecords)) {
             return;
@@ -316,7 +338,7 @@ const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
             // 计算自条目创建以来经过的天数
             $elapsed = $now - $info['recordcreated'];
             // 计算应该发送到第几次通知（初始=1，第1次提醒=2，以此类推）
-            $shouldnotify = min(floor($elapsed / self::PERIODIC_INTERVAL) + 1, self::MAX_NOTIFICATIONS);
+            $shouldnotify = min(floor($elapsed / $periodicinterval) + 1, $maxnotifications);
 
             // 已发送/待发送的次数达到或超过应有次数，跳过
             if ($shouldnotify <= $info['maxseq']) {
@@ -374,7 +396,7 @@ const QUERY_TIME_WINDOW = 2 * HOURSECS;    // 2小时 instead of 45天
             // 从 maxseq+1 开始，逐个生成缺失的提醒记录
             for ($seq = $info['maxseq'] + 1; $seq <= $shouldnotify; $seq++) {
                 // 每条提醒按间隔分散发送：第一条立即发送，后续每条间隔一个周期
-                $scheduledtime = $now + ($seq - $info['maxseq'] - 1) * self::PERIODIC_INTERVAL;
+                $scheduledtime = $now + ($seq - $info['maxseq'] - 1) * $periodicinterval;
                 // 计算该条提醒对应的待审核天数（基于 scheduledtime 而非当前时间）
                 $seqelapsed = $scheduledtime - $info['recordcreated'];
                 $elapseddays = max(0, floor($seqelapsed / DAYSECS));

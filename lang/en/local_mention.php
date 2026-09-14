@@ -21,3 +21,7 @@ $string['sensitive_keywords_desc'] = 'Enter one keyword per line (case-insensiti
 $string['sensitive_warning'] = "\n\n" . '⚠️ Caution! Entry contains sensitive word(s): {$a}';
 $string['auto_approve_databases'] = 'Auto content approval';
 $string['auto_approve_databases_desc'] = 'Select Database activities that should be auto-approved (multiple selection allowed). When the entry content of a selected activity contains no sensitive words, the entry will be automatically approved without human intervention.';
+$string['reminder_interval'] = 'Review reminder interval';
+$string['reminder_interval_desc'] = 'The interval between periodic review reminders. Default: 7 days.';
+$string['max_notifications'] = 'Maximum review notifications';
+$string['max_notifications_desc'] = 'The maximum number of notifications (including the initial notification) sent for a single pending entry. Default: 4.';

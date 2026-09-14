@@ -52,4 +52,25 @@ if ($hassiteconfig) {
         [],  // 默认值：空（不启用任何活动）
         local_mention_get_database_activity_options()
     ));
+
+    // 审核提醒间隔
+    // 配置审核人收到周期性催办提醒的间隔时间
+    $settings->add(new admin_setting_configduration(
+        'local_mention/reminder_interval',
+        get_string('reminder_interval', 'local_mention'),
+        get_string('reminder_interval_desc', 'local_mention'),
+        7 * DAYSECS,  // 默认值：7天
+        1  // 显示单位选项（1=天、小时、分钟）
+    ));
+
+    // 最大审核提醒次数
+    // 单个待审核条目最多发送的通知次数（含初始通知）
+    $settings->add(new admin_setting_configtext(
+        'local_mention/max_notifications',
+        get_string('max_notifications', 'local_mention'),
+        get_string('max_notifications_desc', 'local_mention'),
+        4,  // 默认值：4次
+        PARAM_INT,  // 参数类型：整数
+        2  // 文本框宽度（字符数）
+    ));
 }
