@@ -102,6 +102,22 @@ class hook_callbacks {
     }
 
     /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * Defaults the TinyMCE image dialog's "decorative" checkbox to checked,
+     * so users don't have to fill in alt text when inserting images.
+     * Loaded on all pages — the MutationObserver is passive when no dialog exists.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_tiny_image_decorative(
+        before_footer_html_generation $hook
+    ): void {
+        global $PAGE;
+        $PAGE->requires->js_call_amd('local_mention/tiny_image_decorative', 'init');
+    }
+
+    /**
      * Callback for before_standard_head_html_generation hook.
      *
      * Hides the tool_courserating rating widget on courses that contain a
