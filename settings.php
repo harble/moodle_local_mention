@@ -1,6 +1,8 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
 
+use context_system;
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
@@ -26,9 +28,13 @@ function local_mention_get_database_activity_options(): array {
 }
 }
 
-if ($hassiteconfig) {
+// Use the plugin's own capability so settings are visible to both super admins
+// and system managers (Manager role), without requiring moodle/site:config.
+if (has_capability('local/mention:manage', context_system::instance())) {
     // 将设置添加到"本地插件"分类下
-    $settings = new admin_settingpage('local_mention', get_string('pluginname', 'local_mention'));
+    // 必须传入自定义权限作为第三个参数，否则 admin_settingpage 的 check_access()
+    // 会默认检查 moodle/site:config，导致 Manager 角色在导航树中看不到此页面。
+    $settings = new admin_settingpage('local_mention', get_string('pluginname', 'local_mention'), 'local/mention:manage');
     $ADMIN->add('localplugins', $settings);
 
     // 敏感词关键字配置

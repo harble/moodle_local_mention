@@ -25,3 +25,4 @@ $string['reminder_interval'] = '审核提醒间隔';
 $string['reminder_interval_desc'] = '周期性审核提醒的间隔时间。默认：7 天。';
 $string['max_notifications'] = '最大审核提醒次数';
 $string['max_notifications_desc'] = '单个待审核条目最多发送的通知次数（含初始通知）。默认：4 次。';
+$string['mention:manage'] = '管理提及服务设置';

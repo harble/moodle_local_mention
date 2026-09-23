@@ -25,3 +25,4 @@ $string['reminder_interval'] = 'Review reminder interval';
 $string['reminder_interval_desc'] = 'The interval between periodic review reminders. Default: 7 days.';
 $string['max_notifications'] = 'Maximum review notifications';
 $string['max_notifications_desc'] = 'The maximum number of notifications (including the initial notification) sent for a single pending entry. Default: 4.';
+$string['mention:manage'] = 'Manage Mention service settings';
