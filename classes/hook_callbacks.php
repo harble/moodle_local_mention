@@ -17,6 +17,7 @@
 namespace local_mention;
 
 use core\hook\output\before_footer_html_generation;
+use core\hook\output\before_standard_head_html_generation;
 
 /**
  * Hook callbacks for local_mention.
@@ -98,5 +99,47 @@ class hook_callbacks {
 
         // Load the AMD module with the replacement text.
         $PAGE->requires->js_call_amd('local_mention/rating_label', 'init', [$labeltext]);
+    }
+
+    /**
+     * Callback for before_standard_head_html_generation hook.
+     *
+     * Hides the tool_courserating rating widget on courses that contain a
+     * Database activity (mod_data). This prevents the course rating block
+     * from appearing when the course uses Database for its own rating system.
+     *
+     * @param before_standard_head_html_generation $hook The hook instance.
+     */
+    public static function before_standard_head_html_generation(
+        before_standard_head_html_generation $hook
+    ): void {
+        global $PAGE;
+
+        // Must have a course context (not module, not system).
+        if (!$PAGE->course || $PAGE->course->id <= 0) {
+            return;
+        }
+
+        // Skip the site front page.
+        if ($PAGE->course->id == SITEID) {
+            return;
+        }
+
+        // Use cached course module info to efficiently check for Database activities.
+        // get_fast_modinfo() uses the module cache, so this is not a DB query.
+        $modinfo = get_fast_modinfo($PAGE->course->id);
+        $datainstances = $modinfo->get_instances_of('data');
+
+        // Only hide the course rating widget when the course has exactly one
+        // Database activity. This covers the typical "use Database as a rating
+        // tool" scenario while keeping the widget visible on courses with
+        // multiple activities or zero data instances.
+        if (count($datainstances) === 1) {
+            // Hide the course rating widget via CSS injected in <head>.
+            // This runs before the widget is rendered, so no FOUC/flash.
+            $hook->add_html(
+                '<style>.tool_courserating-widget { display: none !important; }</style>'
+            );
+        }
     }
 }
