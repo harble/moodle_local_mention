@@ -60,4 +60,43 @@ class hook_callbacks {
         // Load the AMD module with the capability flag.
         $PAGE->requires->js_call_amd('local_mention/data_tag_filter', 'init', [$canapprove]);
     }
+
+    /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * Replaces the rating aggregate label on Database activity record view pages.
+     * Changes "Average of ratings"/"平均分" to "Rating"/"评分" without modifying core.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_rating_label(before_footer_html_generation $hook): void {
+        global $PAGE;
+
+        // Only process module contexts.
+        if ($PAGE->context->contextlevel !== CONTEXT_MODULE) {
+            return;
+        }
+
+        // Ensure we have a course module.
+        if (!$PAGE->cm) {
+            return;
+        }
+
+        // Only apply to Database activity (mod_data).
+        if ($PAGE->cm->modname !== 'data') {
+            return;
+        }
+
+        // Determine the desired label text based on current language.
+        // Chinese variants (zh_cn, zh_tw, etc.) show "评分：", others show "Rating:".
+        $lang = current_language();
+        if (strpos($lang, 'zh') === 0) {
+            $labeltext = '我来评分：';
+        } else {
+            $labeltext = 'Rating:';
+        }
+
+        // Load the AMD module with the replacement text.
+        $PAGE->requires->js_call_amd('local_mention/rating_label', 'init', [$labeltext]);
+    }
 }
