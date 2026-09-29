@@ -34,3 +34,5 @@ $string['imagemaxwidth'] = '图片最大宽度';
 $string['imagemaxwidth_desc'] = '超过此宽度的图片将被按比例缩小。默认值：1080 像素。';
 $string['imagequality'] = '图片压缩质量';
 $string['imagequality_desc'] = 'JPEG/WebP 压缩质量（0.0 到 1.0）。值越高质量越好但文件越大。PNG 不受此设置影响。默认值：0.82。';
+$string['cdn_domains'] = 'CDN 域名（白名单）';
+$string['cdn_domains_desc'] = '位于这些域名下的图片将保留远程引用，不进行本地化下载。每行填写一个域名，例如 cdn.example.com。留空表示所有外部图片都进行本地化。';

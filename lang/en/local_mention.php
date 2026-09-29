@@ -34,3 +34,5 @@ $string['imagemaxwidth'] = 'Maximum image width';
 $string['imagemaxwidth_desc'] = 'Images wider than this value will be proportionally scaled down. Default: 1080 pixels.';
 $string['imagequality'] = 'Image compression quality';
 $string['imagequality_desc'] = 'JPEG/WebP compression quality (0.0 to 1.0). Higher values produce better quality but larger files. PNG is not affected by this setting. Default: 0.82.';
+$string['cdn_domains'] = 'CDN domains (whitelist)';
+$string['cdn_domains_desc'] = 'Images hosted on these domains will be kept as remote references and will NOT be localized/downloaded. Enter one domain per line, e.g. cdn.example.com. Leave empty to localize all external images.';

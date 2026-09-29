@@ -109,4 +109,16 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         0.82,   // 默认值
         PARAM_FLOAT
     ));
+
+    // CDN 域名白名单（每行一个域名）
+    // 属于这些域名的外部图片跳过本地化处理，保留远程引用
+    $settings->add(new admin_setting_configtextarea(
+        'local_mention/cdn_domains',
+        get_string('cdn_domains', 'local_mention'),
+        get_string('cdn_domains_desc', 'local_mention'),
+        '',  // 默认值：空（不设置 CDN 白名单）
+        PARAM_RAW,
+        '30',  // cols
+        '6'    // rows
+    ));
 }

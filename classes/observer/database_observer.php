@@ -230,6 +230,18 @@ class database_observer {
         // 获取本站域名，用于排除本站图片
         $sitehost = parse_url($CFG->wwwroot, PHP_URL_HOST);
 
+        // 获取 CDN 域名白名单（每行一个域名）。属于这些域名的图片跳过本地化处理。
+        $cdndomains = [];
+        $cdnconfig = get_config('local_mention', 'cdn_domains');
+        if (!empty($cdnconfig)) {
+            foreach (preg_split('/\r\n|\r|\n/', $cdnconfig) as $line) {
+                $line = trim($line);
+                if ($line !== '') {
+                    $cdndomains[] = strtolower($line);
+                }
+            }
+        }
+
         // 获取该 Database 活动中所有 textarea 类型的字段
         $fields = $DB->get_records('data_fields', [
             'dataid' => $cm->instance,
@@ -283,6 +295,11 @@ class database_observer {
                 // 跳过本站域名下的图片
                 $urlhost = parse_url($url, PHP_URL_HOST);
                 if ($urlhost && strcasecmp($urlhost, $sitehost) === 0) {
+                    continue;
+                }
+
+                // 跳过属于 CDN 白名单域名的图片（不本地化，保留远程引用）
+                if ($urlhost && in_array(strtolower($urlhost), $cdndomains)) {
                     continue;
                 }
 
