@@ -311,7 +311,71 @@ class database_observer {
                         'filename' => $filename,
                     ];
 
-                    $fs->create_file_from_url((object)$filerecord, $url);
+                    $file = $fs->create_file_from_url((object)$filerecord, $url);
+
+                    // --- 图片瘦身：宽度超过 1080px 的图片按比例缩小 ---
+                    if ($file) {
+                        $maxwidth = 1080;
+                        $imageinfo = $file->get_imageinfo();
+                        if ($imageinfo && !empty($imageinfo['width']) && $imageinfo['width'] > $maxwidth) {
+                            $mimetype = $imageinfo['mimetype'] ?? '';
+
+                            // 跳过 SVG（矢量图，不适于像素缩放）
+                            if ($mimetype === 'image/svg+xml') {
+                                // 不执行 resize
+                            } else {
+                                // 跳过动画 GIF（缩放会丢失动画帧）
+                                if ($mimetype !== 'image/gif' || !self::is_animated_gif($file->get_content())) {
+                                    $newwidth = $maxwidth;
+                                    $newheight = round($maxwidth * $imageinfo['height'] / $imageinfo['width']);
+
+                                    $filecontent = $file->get_content();
+                                    $src = @imagecreatefromstring($filecontent);
+
+                                    if ($src) {
+                                        $dst = imagescale($src, $newwidth, $newheight);
+
+                                        if ($dst) {
+                                            $tempdir = make_temp_directory('local_mention_resize');
+                                            $tmppath = $tempdir . '/' . uniqid() . '_' . $filename;
+
+                                            $saved = false;
+                                            switch ($mimetype) {
+                                                case 'image/jpeg':
+                                                case 'image/pjpeg':
+                                                    $saved = imagejpeg($dst, $tmppath, 85);
+                                                    break;
+                                                case 'image/png':
+                                                    $saved = imagepng($dst, $tmppath, 9);
+                                                    break;
+                                                case 'image/webp':
+                                                    $saved = imagewebp($dst, $tmppath, 85);
+                                                    break;
+                                                case 'image/gif':
+                                                    $saved = imagegif($dst, $tmppath);
+                                                    break;
+                                                default:
+                                                    // 未知格式回退为 JPEG
+                                                    $saved = imagejpeg($dst, $tmppath, 85);
+                                                    break;
+                                            }
+
+                                            if ($saved) {
+                                                $file->delete();
+                                                $file = $fs->create_file_from_pathname(
+                                                    (object)$filerecord, $tmppath
+                                                );
+                                            }
+
+                                            @unlink($tmppath);
+                                            imagedestroy($dst);
+                                        }
+                                        imagedestroy($src);
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     // 替换 HTML 中的外部 URL 为 @@PLUGINFILE@@ 引用
                     $newtag = str_replace($url, '@@PLUGINFILE@@/' . rawurlencode($filename), $fulltag);
@@ -572,5 +636,26 @@ class database_observer {
             }
             throw $e;
         }
+    }
+
+    /**
+     * 检测 GIF 是否为动画（多帧）。
+     *
+     * 通过读取 Graphic Control Extension (GCE) 标记的数量来判断：
+     * 动画 GIF 至少包含 2 个 GCE 块（每个帧对应一个）。
+     *
+     * @param string $content GIF 文件的二进制内容
+     * @return bool
+     */
+    private static function is_animated_gif(string $content): bool {
+        // 非 GIF 或头部异常，直接返回 false
+        if (substr($content, 0, 6) !== 'GIF87a' && substr($content, 0, 6) !== 'GIF89a') {
+            return false;
+        }
+
+        // 计算 Graphic Control Extension 块的数量
+        // 每个块以 0x21 0xF9 开头
+        $count = substr_count($content, "\x21\xF9");
+        return $count > 1;
     }
 }
