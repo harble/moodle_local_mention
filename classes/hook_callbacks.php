@@ -118,6 +118,37 @@ class hook_callbacks {
     }
 
     /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * Loads the TinyMCE image compression AMD module on all pages that
+     * include a TinyMCE editor. The module intercepts image uploads,
+     * drag-and-drop, and paste at the browser level, compressing
+     * JPEG/PNG/WebP images before they reach the Moodle draft area.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_tiny_image_compress(
+        before_footer_html_generation $hook
+    ): void {
+        global $PAGE;
+
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enableimagecompress');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
+        $maxWidth = (int)(get_config('local_mention', 'imagemaxwidth') ?: 1080);
+        $quality  = (float)(get_config('local_mention', 'imagequality') ?: 0.82);
+
+        $PAGE->requires->js_call_amd(
+            'local_mention/tiny_image_compress',
+            'init',
+            [$maxWidth, $quality]
+        );
+    }
+
+    /**
      * Callback for before_standard_head_html_generation hook.
      *
      * Hides the tool_courserating rating widget on courses that contain a

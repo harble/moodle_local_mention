@@ -26,3 +26,11 @@ $string['reminder_interval_desc'] = 'The interval between periodic review remind
 $string['max_notifications'] = 'Maximum review notifications';
 $string['max_notifications_desc'] = 'The maximum number of notifications (including the initial notification) sent for a single pending entry. Default: 4.';
 $string['mention:manage'] = 'Manage Mention service settings';
+
+// TinyMCE image compression settings
+$string['enableimagecompress'] = 'Enable image compression';
+$string['enableimagecompress_desc'] = 'Enable automatic front-end image compression when uploading, dragging, or pasting images in the TinyMCE editor.';
+$string['imagemaxwidth'] = 'Maximum image width';
+$string['imagemaxwidth_desc'] = 'Images wider than this value will be proportionally scaled down. Default: 1080 pixels.';
+$string['imagequality'] = 'Image compression quality';
+$string['imagequality_desc'] = 'JPEG/WebP compression quality (0.0 to 1.0). Higher values produce better quality but larger files. PNG is not affected by this setting. Default: 0.82.';

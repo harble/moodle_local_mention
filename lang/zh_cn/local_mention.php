@@ -26,3 +26,11 @@ $string['reminder_interval_desc'] = '周期性审核提醒的间隔时间。默�
 $string['max_notifications'] = '最大审核提醒次数';
 $string['max_notifications_desc'] = '单个待审核条目最多发送的通知次数（含初始通知）。默认：4 次。';
 $string['mention:manage'] = '管理提及服务设置';
+
+// TinyMCE 图片压缩设置
+$string['enableimagecompress'] = '启用图片压缩';
+$string['enableimagecompress_desc'] = '在 TinyMCE 编辑器中上传、拖拽或粘贴图片时，自动在前端压缩图片，减少上传文件大小。';
+$string['imagemaxwidth'] = '图片最大宽度';
+$string['imagemaxwidth_desc'] = '超过此宽度的图片将被按比例缩小。默认值：1080 像素。';
+$string['imagequality'] = '图片压缩质量';
+$string['imagequality_desc'] = 'JPEG/WebP 压缩质量（0.0 到 1.0）。值越高质量越好但文件越大。PNG 不受此设置影响。默认值：0.82。';

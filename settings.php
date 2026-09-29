@@ -79,4 +79,34 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         PARAM_INT,  // 参数类型：整数
         2  // 文本框宽度（字符数）
     ));
+
+    // =========================================================================
+    // TinyMCE 图片压缩设置
+    // =========================================================================
+
+    // 启用/禁用图片压缩
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enableimagecompress',
+        get_string('enableimagecompress', 'local_mention'),
+        get_string('enableimagecompress_desc', 'local_mention'),
+        1  // 默认启用
+    ));
+
+    // 图片最大宽度（像素）
+    $settings->add(new admin_setting_configtext(
+        'local_mention/imagemaxwidth',
+        get_string('imagemaxwidth', 'local_mention'),
+        get_string('imagemaxwidth_desc', 'local_mention'),
+        1080,   // 默认值
+        PARAM_INT
+    ));
+
+    // 图片压缩质量
+    $settings->add(new admin_setting_configtext(
+        'local_mention/imagequality',
+        get_string('imagequality', 'local_mention'),
+        get_string('imagequality_desc', 'local_mention'),
+        0.82,   // 默认值
+        PARAM_FLOAT
+    ));
 }
