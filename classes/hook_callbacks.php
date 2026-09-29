@@ -39,6 +39,12 @@ class hook_callbacks {
     public static function before_footer_html_generation(before_footer_html_generation $hook): void {
         global $PAGE, $USER;
 
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enabletagfilter');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
         // Only process module contexts.
         if ($PAGE->context->contextlevel !== CONTEXT_MODULE) {
             return;
@@ -73,6 +79,12 @@ class hook_callbacks {
     public static function before_footer_html_generation_rating_label(before_footer_html_generation $hook): void {
         global $PAGE;
 
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enableratinglabel');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
         // Only process module contexts.
         if ($PAGE->context->contextlevel !== CONTEXT_MODULE) {
             return;
@@ -89,12 +101,12 @@ class hook_callbacks {
         }
 
         // Determine the desired label text based on current language.
-        // Chinese variants (zh_cn, zh_tw, etc.) show "评分：", others show "Rating:".
+        // Chinese variants (zh_cn, zh_tw, etc.) use the Chinese label, others use the English label.
         $lang = current_language();
         if (strpos($lang, 'zh') === 0) {
-            $labeltext = '我来评分：';
+            $labeltext = trim((string)(get_config('local_mention', 'ratingchineselabel') ?: '我来评分：'));
         } else {
-            $labeltext = 'Rating:';
+            $labeltext = trim((string)(get_config('local_mention', 'ratingenglishlabel') ?: 'Rating:'));
         }
 
         // Load the AMD module with the replacement text.
@@ -114,6 +126,13 @@ class hook_callbacks {
         before_footer_html_generation $hook
     ): void {
         global $PAGE;
+
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enabledecorative');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
         $PAGE->requires->js_call_amd('local_mention/tiny_image_decorative', 'init');
     }
 
@@ -161,6 +180,12 @@ class hook_callbacks {
         before_standard_head_html_generation $hook
     ): void {
         global $PAGE;
+
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enablehiderating');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
 
         // Must have a course context (not module, not system).
         if (!$PAGE->course || $PAGE->course->id <= 0) {

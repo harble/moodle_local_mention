@@ -1,7 +1,7 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
 
-$string['pluginname'] = '提及服务';
+$string['pluginname'] = '分享服务';
 $string['privacy:metadata'] = 'local_mention 插件会存储提及通知。';
 $string['messageprovider:mentions'] = '提及通知';
 $string['mentionnotificationsubject'] = '{$a->author} 提及了你：{$a->item}';
@@ -36,3 +36,15 @@ $string['imagequality'] = '图片压缩质量';
 $string['imagequality_desc'] = 'JPEG/WebP 压缩质量（0.0 到 1.0）。值越高质量越好但文件越大。PNG 不受此设置影响。默认值：0.82。';
 $string['cdn_domains'] = 'CDN 域名（白名单）';
 $string['cdn_domains_desc'] = '位于这些域名下的图片将保留远程引用，不进行本地化下载。每行填写一个域名，例如 cdn.example.com。留空表示所有外部图片都进行本地化。';
+$string['enabletagfilter'] = '启用 Database 标签过滤';
+$string['enabletagfilter_desc'] = '在 Database 活动新增/编辑条目页面，根据是否拥有 mod/data:approve 权限过滤标签候选项（显示/隐藏包含 "draft" 的标签）。';
+$string['enableratinglabel'] = '启用评分标签文本替换';
+$string['enableratinglabel_desc'] = '在 Database 记录查看页面，将评分汇总标签替换为配置的文字。';
+$string['ratingchineselabel'] = '中文评分标签文字';
+$string['ratingchineselabel_desc'] = '中文环境下使用的评分标签替换文字。默认值：我来评分：';
+$string['ratingenglishlabel'] = '英文评分标签文字';
+$string['ratingenglishlabel_desc'] = '非中文环境下使用的评分标签替换文字。默认值：Rating:';
+$string['enabledecorative'] = '启用"仅用于装饰"图片默认勾选';
+$string['enabledecorative_desc'] = '在 TinyMCE 图片对话框中自动勾选"此图像仅用于装饰"复选框，使插入图片时无需填写替代文本（Alt text）。';
+$string['enablehiderating'] = '启用隐藏课程评分组件';
+$string['enablehiderating_desc'] = '在恰好包含一个 Database 活动的课程上隐藏 tool_courserating 评分组件。';

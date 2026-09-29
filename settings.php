@@ -121,4 +121,59 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         '30',  // cols
         '6'    // rows
     ));
+
+    // =========================================================================
+    // 其它 hook 功能开关
+    // =========================================================================
+
+    // 启用/禁用 Database 条目标签过滤
+    // 根据用户是否拥有 mod/data:approve 权限，过滤标签候选项（隐藏/只显示含 "draft" 的标签）
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enabletagfilter',
+        get_string('enabletagfilter', 'local_mention'),
+        get_string('enabletagfilter_desc', 'local_mention'),
+        1  // 默认启用
+    ));
+
+    // 启用/禁用评分标签文本替换
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enableratinglabel',
+        get_string('enableratinglabel', 'local_mention'),
+        get_string('enableratinglabel_desc', 'local_mention'),
+        1  // 默认启用
+    ));
+
+    // 评分标签中文替换文字
+    $settings->add(new admin_setting_configtext(
+        'local_mention/ratingchineselabel',
+        get_string('ratingchineselabel', 'local_mention'),
+        get_string('ratingchineselabel_desc', 'local_mention'),
+        '我来评分：',  // 默认值
+        PARAM_TEXT
+    ));
+
+    // 评分标签英文替换文字
+    $settings->add(new admin_setting_configtext(
+        'local_mention/ratingenglishlabel',
+        get_string('ratingenglishlabel', 'local_mention'),
+        get_string('ratingenglishlabel_desc', 'local_mention'),
+        'Rating:',  // 默认值
+        PARAM_TEXT
+    ));
+
+    // 启用/禁用 TinyMCE 图片"仅用于装饰"默认勾选
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enabledecorative',
+        get_string('enabledecorative', 'local_mention'),
+        get_string('enabledecorative_desc', 'local_mention'),
+        1  // 默认启用
+    ));
+
+    // 启用/禁用隐藏课程评分组件
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enablehiderating',
+        get_string('enablehiderating', 'local_mention'),
+        get_string('enablehiderating_desc', 'local_mention'),
+        1  // 默认启用
+    ));
 }
