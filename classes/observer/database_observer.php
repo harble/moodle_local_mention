@@ -313,9 +313,15 @@ class database_observer {
 
                     $file = $fs->create_file_from_url((object)$filerecord, $url);
 
-                    // --- 图片瘦身：宽度超过 1080px 的图片按比例缩小 ---
-                    if ($file) {
-                        $maxwidth = 1080;
+                    // 图片本地化（下载外部图片）不受总开关影响。
+                    // --- 图片瘦身：复用 local_mention 的图片压缩配置 ---
+                    // enableimagecompress 为总开关；关闭时不执行 resize，但仍完成图片本地化。
+                    // imagemaxwidth：超过此宽度的图片按比例缩小（默认 1080）。
+                    // imagequality：0–1 质量，换算为 GD 的 0–100（仅 JPEG/WebP 使用；PNG 为无损级别 9）。
+                    if ($file && (bool)(get_config('local_mention', 'enableimagecompress') ?: 1)) {
+                        $maxwidth = (int)(get_config('local_mention', 'imagemaxwidth') ?: 1080);
+                        $gdquality = (int)round((float)(get_config('local_mention', 'imagequality') ?: 0.82) * 100);
+                        $gdquality = max(1, min(100, $gdquality));
                         $imageinfo = $file->get_imageinfo();
                         if ($imageinfo && !empty($imageinfo['width']) && $imageinfo['width'] > $maxwidth) {
                             $mimetype = $imageinfo['mimetype'] ?? '';
@@ -343,20 +349,20 @@ class database_observer {
                                             switch ($mimetype) {
                                                 case 'image/jpeg':
                                                 case 'image/pjpeg':
-                                                    $saved = imagejpeg($dst, $tmppath, 85);
+                                                    $saved = imagejpeg($dst, $tmppath, $gdquality);
                                                     break;
                                                 case 'image/png':
                                                     $saved = imagepng($dst, $tmppath, 9);
                                                     break;
                                                 case 'image/webp':
-                                                    $saved = imagewebp($dst, $tmppath, 85);
+                                                    $saved = imagewebp($dst, $tmppath, $gdquality);
                                                     break;
                                                 case 'image/gif':
                                                     $saved = imagegif($dst, $tmppath);
                                                     break;
                                                 default:
                                                     // 未知格式回退为 JPEG
-                                                    $saved = imagejpeg($dst, $tmppath, 85);
+                                                    $saved = imagejpeg($dst, $tmppath, $gdquality);
                                                     break;
                                             }
 
