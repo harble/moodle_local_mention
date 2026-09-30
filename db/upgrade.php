@@ -28,5 +28,36 @@ function xmldb_local_mention_upgrade($oldversion) {
         upgrade_plugin_savepoint($result, 2026091501, 'local', 'mention');
     }
 
+    // 从 2026091602 升级：添加聚合浏览计数表 local_mention_entry_views
+    if ($oldversion < 2026091603) {
+        $table = new xmldb_table('local_mention_entry_views');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('recordid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('viewcount', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('seedcount', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('firstviewed', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('lastviewed', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('recordid-userid', XMLDB_INDEX_UNIQUE, ['recordid', 'userid']);
+        $table->add_index('recordid', XMLDB_INDEX_NOTUNIQUE, ['recordid']);
+        $table->add_index('userid', XMLDB_INDEX_NOTUNIQUE, ['userid']);
+
+        $dbman = $DB->get_manager();
+        $dbman->create_table($table);
+
+        // 写入配置默认值
+        if (get_config('local_mention', 'enablerecordview') === false) {
+            set_config('enablerecordview', 1, 'local_mention');
+        }
+        if (get_config('local_mention', 'viewdedupwindow') === false) {
+            set_config('viewdedupwindow', 300, 'local_mention');
+        }
+
+        upgrade_plugin_savepoint($result, 2026091603, 'local', 'mention');
+    }
+
     return $result;
 }

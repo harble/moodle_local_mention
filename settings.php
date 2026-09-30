@@ -176,4 +176,27 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         get_string('enablehiderating_desc', 'local_mention'),
         1  // 默认启用
     ));
+
+    // =========================================================================
+    // 浏览计数设置
+    // =========================================================================
+
+    // 启用/禁用 Database 条目浏览计数
+    // 在原生 Database 单条查看页面记录聚合浏览计数
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enablerecordview',
+        get_string('enablerecordview', 'local_mention'),
+        get_string('enablerecordview_desc', 'local_mention'),
+        1  // 默认启用
+    ));
+
+    // 浏览去重窗口
+    // 同一用户在同一时间窗口内多次查看同一条目只计数一次
+    $settings->add(new admin_setting_configduration(
+        'local_mention/viewdedupwindow',
+        get_string('viewdedupwindow', 'local_mention'),
+        get_string('viewdedupwindow_desc', 'local_mention'),
+        300,  // 默认值：5分钟
+        1  // 显示单位选项（1=天、小时、分钟）
+    ));
 }

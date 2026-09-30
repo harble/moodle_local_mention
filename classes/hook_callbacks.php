@@ -214,4 +214,38 @@ class hook_callbacks {
             );
         }
     }
+
+    /**
+     * Callback for before_standard_head_html_generation hook.
+     *
+     * Loads the entry_view AMD module on native Database activity single-record
+     * view pages (/mod/data/view.php?rid=X). The module logs a view against the
+     * aggregated counter table so browsing across all entry points is counted.
+     *
+     * @param before_standard_head_html_generation $hook The hook instance.
+     */
+    public static function before_standard_head_html_generation_entry_view(
+        before_standard_head_html_generation $hook
+    ): void {
+        global $PAGE;
+
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enablerecordview');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
+        // Only operate on the native Database activity view page.
+        if (strpos($PAGE->url->out(), '/mod/data/view.php') === false) {
+            return;
+        }
+
+        // A single-record view always carries a rid parameter.
+        $rid = optional_param('rid', 0, PARAM_INT);
+        if ($rid <= 0) {
+            return;
+        }
+
+        $PAGE->requires->js_call_amd('local_mention/entry_view', 'init', [$rid]);
+    }
 }

@@ -48,3 +48,9 @@ $string['enabledecorative'] = 'Enable "decorative" image default';
 $string['enabledecorative_desc'] = 'Automatically check the "This image is decorative only" checkbox in the TinyMCE image dialog so users do not need to enter alt text.';
 $string['enablehiderating'] = 'Enable hiding course rating widget';
 $string['enablehiderating_desc'] = 'Hide the tool_courserating widget on courses that contain exactly one Database activity.';
+
+// Entry view counting settings
+$string['enablerecordview'] = 'Enable Database entry view counting';
+$string['enablerecordview_desc'] = 'Record aggregated view counts on the native Database single-record view page.';
+$string['viewdedupwindow'] = 'View deduplication window';
+$string['viewdedupwindow_desc'] = 'Repeated views of the same entry by the same user within this window are counted only once. Default: 5 minutes.';

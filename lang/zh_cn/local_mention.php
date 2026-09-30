@@ -48,3 +48,9 @@ $string['enabledecorative'] = '启用"仅用于装饰"图片默认勾选';
 $string['enabledecorative_desc'] = '在 TinyMCE 图片对话框中自动勾选"此图像仅用于装饰"复选框，使插入图片时无需填写替代文本（Alt text）。';
 $string['enablehiderating'] = '启用隐藏课程评分组件';
 $string['enablehiderating_desc'] = '在恰好包含一个 Database 活动的课程上隐藏 tool_courserating 评分组件。';
+
+// 浏览计数设置
+$string['enablerecordview'] = '启用 Database 条目浏览计数';
+$string['enablerecordview_desc'] = '在原生 Database 单条查看页面上记录聚合浏览计数。';
+$string['viewdedupwindow'] = '浏览去重窗口';
+$string['viewdedupwindow_desc'] = '同一用户在此时间窗口内重复查看同一条目只计数一次。默认：5 分钟。';

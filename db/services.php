@@ -10,4 +10,12 @@ $functions = array(
         'type' => 'read',
         'ajax' => true,
     ),
+    'local_mention_log_view' => array(
+        'classname' => 'local_mention\\external\\log_view',
+        'methodname' => 'execute',
+        'classpath' => '',
+        'description' => 'Log a database record view for aggregated view counting',
+        'type' => 'write',
+        'ajax' => true,
+    ),
 );
