@@ -48,3 +48,17 @@
     /* font-weight: 600 */
 
 }
+
+/* Entry view counter badge on the native mod_data single-record page. */
+.local-mention-entry-view-count {
+    display: inline-block;
+    margin: 8px 0;
+    padding: 4px 10px;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #2563eb;
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+}

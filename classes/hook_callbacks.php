@@ -227,7 +227,7 @@ class hook_callbacks {
     public static function before_standard_head_html_generation_entry_view(
         before_standard_head_html_generation $hook
     ): void {
-        global $PAGE;
+        global $PAGE, $DB;
 
         // Respect the admin setting.
         $enable = get_config('local_mention', 'enablerecordview');
@@ -246,6 +246,28 @@ class hook_callbacks {
             return;
         }
 
+        // Register the view asynchronously.
         $PAGE->requires->js_call_amd('local_mention/entry_view', 'init', [$rid]);
+
+        // Show the aggregated view counter on the single-record view.
+        $enabledisplay = get_config('local_mention', 'enablerecordviewdisplay');
+        if ($enabledisplay === false || (bool)$enabledisplay === true) {
+            $count = 0;
+            $total = $DB->get_record_sql(
+                "SELECT SUM(viewcount + seedcount) AS total
+                   FROM {local_mention_entry_views}
+                  WHERE recordid = ?",
+                [$rid]
+            );
+            if ($total) {
+                $count = (int)$total->total;
+            }
+
+            if ($count > 0) {
+                $label = get_string('viewcount', 'local_mention', $count);
+                $target = get_config('local_mention', 'entryviewcounttarget');
+                $PAGE->requires->js_call_amd('local_mention/entry_view_count', 'init', [$label, $target]);
+            }
+        }
     }
 }

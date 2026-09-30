@@ -59,5 +59,23 @@ function xmldb_local_mention_upgrade($oldversion) {
         upgrade_plugin_savepoint($result, 2026091603, 'local', 'mention');
     }
 
+    // 从 2026091603 升级：添加显示浏览计数的默认配置
+    if ($oldversion < 2026091604) {
+        if (get_config('local_mention', 'enablerecordviewdisplay') === false) {
+            set_config('enablerecordviewdisplay', 1, 'local_mention');
+        }
+
+        upgrade_plugin_savepoint($result, 2026091604, 'local', 'mention');
+    }
+
+    // 从 2026091604 升级：添加浏览计数徽章定位选择器配置（默认空 = 插入到记录容器顶部）
+    if ($oldversion < 2026091605) {
+        if (get_config('local_mention', 'entryviewcounttarget') === false) {
+            set_config('entryviewcounttarget', '', 'local_mention');
+        }
+
+        upgrade_plugin_savepoint($result, 2026091605, 'local', 'mention');
+    }
+
     return $result;
 }

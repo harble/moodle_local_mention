@@ -190,6 +190,26 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         1  // 默认启用
     ));
 
+    // 启用/禁用显示条目浏览计数
+    // 在原生 Database 单条查看页面显示聚合浏览计数
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enablerecordviewdisplay',
+        get_string('enablerecordviewdisplay', 'local_mention'),
+        get_string('enablerecordviewdisplay_desc', 'local_mention'),
+        1  // 默认启用
+    ));
+
+    // 浏览计数徽章插入位置
+    // 指定计数徽章插入到哪一个元素之后（CSS 选择器），留空则插入到记录容器顶部
+    $settings->add(new admin_setting_configtext(
+        'local_mention/entryviewcounttarget',
+        get_string('entryviewcounttarget', 'local_mention'),
+        get_string('entryviewcounttarget_desc', 'local_mention'),
+        '',  // 默认空，插入到容器顶部
+        PARAM_RAW,
+        60  // 输入框宽度
+    ));
+
     // 浏览去重窗口
     // 同一用户在同一时间窗口内多次查看同一条目只计数一次
     $settings->add(new admin_setting_configduration(
