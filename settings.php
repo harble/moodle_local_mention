@@ -210,6 +210,17 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         60  // 输入框宽度
     ));
 
+    // 独立条目视图时间格式
+    // 修改独立条目视图中 ##timeadded## / ##timemodified## 时间的显示格式，留空则保持默认
+    $settings->add(new admin_setting_configtext(
+        'local_mention/entryviewdateformat',
+        get_string('entryviewdateformat', 'local_mention'),
+        get_string('entryviewdateformat_desc', 'local_mention'),
+        '%Y/%m/%d %H:%M',  // 默认格式，如 2026/09/30 14:30
+        PARAM_RAW,
+        40  // 输入框宽度
+    ));
+
     // 浏览去重窗口
     // 同一用户在同一时间窗口内多次查看同一条目只计数一次
     $settings->add(new admin_setting_configduration(

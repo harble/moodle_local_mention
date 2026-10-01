@@ -77,5 +77,14 @@ function xmldb_local_mention_upgrade($oldversion) {
         upgrade_plugin_savepoint($result, 2026091605, 'local', 'mention');
     }
 
+    // 从 2026091605 升级：添加独立条目视图时间格式配置（默认为带时间的日期格式）
+    if ($oldversion < 2026091606) {
+        if (get_config('local_mention', 'entryviewdateformat') === false) {
+            set_config('entryviewdateformat', '%Y/%m/%d %H:%M', 'local_mention');
+        }
+
+        upgrade_plugin_savepoint($result, 2026091606, 'local', 'mention');
+    }
+
     return $result;
 }

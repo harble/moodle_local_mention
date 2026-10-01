@@ -246,6 +246,36 @@ class hook_callbacks {
             return;
         }
 
+        // Keep the record info columns (user/added, last edited, actions) on a
+        // single row on small screens (<768px). The default template stacks the
+        // "actions" column below once the middle column is widened, so we switch
+        // the flex container to nowrap and let the time-info column take up the
+        // remaining space. This overrides the core Bootstrap grid via CSS only.
+        $hook->add_html(
+            '<style>
+                @media (max-width: 767.98px) {
+                    #data-singleview-content .row.h-100 {
+                        flex-wrap: nowrap !important;
+                    }
+                    #data-singleview-content .row.h-100 > .col-auto,
+                    #data-singleview-content .row.h-100 > .col-3,
+                    #data-singleview-content .row.h-100 > .col-4.col-md-3.ms-auto {
+                        flex: 0 1 auto !important;
+                        max-width: none !important;
+                        min-width: 0 !important;
+                    }
+                    #data-singleview-content .row.h-100 > .col-4.col-md-6.text-end.align-self-center.data-timeinfo {
+                        flex: 1 1 55% !important;
+                        max-width: none !important;
+                        min-width: 0 !important;
+                        white-space: nowrap !important;
+                        text-align: right !important;
+                        justify-content: flex-end !important;
+                    }
+                }
+            </style>'
+        );
+
         // Register the view asynchronously.
         $PAGE->requires->js_call_amd('local_mention/entry_view', 'init', [$rid]);
 
@@ -267,6 +297,39 @@ class hook_callbacks {
                 $label = get_string('viewcount', 'local_mention', $count);
                 $target = get_config('local_mention', 'entryviewcounttarget');
                 $PAGE->requires->js_call_amd('local_mention/entry_view_count', 'init', [$label, $target]);
+            }
+        }
+
+        // Re-format the ##timeadded## / ##timemodified## labels on the
+        // single-record view using the configured date format (no core change).
+        $dateformat = (string)get_config('local_mention', 'entryviewdateformat');
+        if ($dateformat !== '') {
+            $record = $DB->get_record('data_records', ['id' => $rid], 'id,timecreated,timemodified');
+            if ($record) {
+                // Build a list of {title, text} pairs. The title attribute
+                // keeps the original full date/time produced by userdate(),
+                // which acts as a stable match anchor in the DOM, while "text"
+                // is the target formatted label we want to display.
+                $items = [];
+                $timecreated = (int)$record->timecreated;
+                $timemodified = !empty($record->timemodified) ? (int)$record->timemodified : 0;
+
+                if ($timecreated > 0) {
+                    $items[] = [
+                        'title' => userdate($timecreated),
+                        'text' => userdate($timecreated, $dateformat),
+                    ];
+                }
+                if ($timemodified > 0) {
+                    $items[] = [
+                        'title' => userdate($timemodified),
+                        'text' => userdate($timemodified, $dateformat),
+                    ];
+                }
+
+                if (!empty($items)) {
+                    $PAGE->requires->js_call_amd('local_mention/entry_dateformat', 'init', [$items]);
+                }
             }
         }
     }

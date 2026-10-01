@@ -59,3 +59,5 @@ $string['enablerecordviewdisplay_desc'] = '在原生 Database 单条查看页面
 $string['viewcount'] = '{$a} 次浏览';
 $string['entryviewcounttarget'] = '浏览计数插入位置（CSS 选择器）';
 $string['entryviewcounttarget_desc'] = '指定浏览计数徽章插入到哪个元素之后（例如，包含"最后编辑: ##timemodified##"的那一行）。留空则插入到记录容器顶部。';
+$string['entryviewdateformat'] = '条目视图时间格式';
+$string['entryviewdateformat_desc'] = '原生 Database 单条查看页面上 ##timeadded## / ##timemodified## 时间标签使用的 PHP strftime 格式。留空则保持默认。示例：%Y/%m/%d %H:%M 会显示为 2026/09/30 14:30。';
