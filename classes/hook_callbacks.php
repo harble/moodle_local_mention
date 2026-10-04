@@ -168,6 +168,45 @@ class hook_callbacks {
     }
 
     /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * Controls the display of the first course section whose name matches the
+     * configured value (default: 愿心加油站). The selected section can be either
+     * collapsed (remembered per user) or hidden entirely, without changing core.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_section_display(before_footer_html_generation $hook): void {
+        global $PAGE;
+
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enablesectiondisplay');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
+        // Only course pages on the standard course view layout.
+        if (!$PAGE->course || $PAGE->course->id <= 0 || $PAGE->course->id == SITEID) {
+            return;
+        }
+        if (strpos($PAGE->pagetype, 'course-view-') !== 0) {
+            return;
+        }
+
+        $mode       = (string)(get_config('local_mention', 'sectiondisplaymode') ?: 'fold');
+        $sectionname = trim((string)(get_config('local_mention', 'sectiondisplayname') ?: '愿心加油站'));
+        if ($sectionname === '') {
+            return;
+        }
+
+        $PAGE->requires->js_call_amd(
+            'local_mention/course_section_display',
+            'init',
+            [$mode, $sectionname]
+        );
+    }
+
+    /**
      * Callback for before_standard_head_html_generation hook.
      *
      * Hides the tool_courserating rating widget on courses that contain a

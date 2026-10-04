@@ -42,6 +42,10 @@ $callbacks = [
         'callback' => [\local_mention\hook_callbacks::class, 'before_footer_html_generation_tiny_image_compress'],
     ],
     [
+        'hook' => \core\hook\output\before_footer_html_generation::class,
+        'callback' => [\local_mention\hook_callbacks::class, 'before_footer_html_generation_section_display'],
+    ],
+    [
         'hook' => \core\hook\output\before_standard_head_html_generation::class,
         'callback' => [\local_mention\hook_callbacks::class, 'before_standard_head_html_generation'],
     ],

@@ -48,6 +48,14 @@ $string['enabledecorative'] = '启用"仅用于装饰"图片默认勾选';
 $string['enabledecorative_desc'] = '在 TinyMCE 图片对话框中自动勾选"此图像仅用于装饰"复选框，使插入图片时无需填写替代文本（Alt text）。';
 $string['enablehiderating'] = '启用隐藏课程评分组件';
 $string['enablehiderating_desc'] = '在恰好包含一个 Database 活动的课程上隐藏 tool_courserating 评分组件。';
+$string['enablesectiondisplay'] = '启用 section 显示控制';
+$string['enablesectiondisplay_desc'] = '控制课程中第一个名称为配置值的 section 的显示方式，可折叠显示（按用户记住）或完全隐藏。';
+$string['sectiondisplayname'] = 'section 名称';
+$string['sectiondisplayname_desc'] = '要控制的课程中第一个 section 的名称。默认值：愿心加油站';
+$string['sectiondisplaymode'] = 'section 显示模式';
+$string['sectiondisplaymode_desc'] = '在课程页面如何显示匹配的 section。';
+$string['sectiondisplaymode_fold'] = '折叠显示（记住）';
+$string['sectiondisplaymode_hide'] = '不显示';
 
 // 浏览计数设置
 $string['enablerecordview'] = '启用 Database 条目浏览计数';

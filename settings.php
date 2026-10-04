@@ -177,6 +177,35 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         1  // 默认启用
     ));
 
+    // 启用/禁用"愿心加油站"section 显示控制
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enablesectiondisplay',
+        get_string('enablesectiondisplay', 'local_mention'),
+        get_string('enablesectiondisplay_desc', 'local_mention'),
+        1  // 默认启用
+    ));
+
+    // 匹配的 section 名称（用作显示控制的匹配条件）
+    $settings->add(new admin_setting_configtext(
+        'local_mention/sectiondisplayname',
+        get_string('sectiondisplayname', 'local_mention'),
+        get_string('sectiondisplayname_desc', 'local_mention'),
+        '愿心加油站',  // 默认值
+        PARAM_TEXT
+    ));
+
+    // 匹配 section 的显示模式
+    $settings->add(new admin_setting_configselect(
+        'local_mention/sectiondisplaymode',
+        get_string('sectiondisplaymode', 'local_mention'),
+        get_string('sectiondisplaymode_desc', 'local_mention'),
+        'fold',  // 默认值：折叠显示
+        [
+            'fold' => get_string('sectiondisplaymode_fold', 'local_mention'),
+            'hide' => get_string('sectiondisplaymode_hide', 'local_mention'),
+        ]
+    ));
+
     // =========================================================================
     // 浏览计数设置
     // =========================================================================

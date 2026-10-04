@@ -48,6 +48,14 @@ $string['enabledecorative'] = 'Enable "decorative" image default';
 $string['enabledecorative_desc'] = 'Automatically check the "This image is decorative only" checkbox in the TinyMCE image dialog so users do not need to enter alt text.';
 $string['enablehiderating'] = 'Enable hiding course rating widget';
 $string['enablehiderating_desc'] = 'Hide the tool_courserating widget on courses that contain exactly one Database activity.';
+$string['enablesectiondisplay'] = 'Enable section display control';
+$string['enablesectiondisplay_desc'] = 'Control the display of the first course section whose name matches the configured value, either by folding it (remembered per user) or hiding it entirely.';
+$string['sectiondisplayname'] = 'Section name';
+$string['sectiondisplayname_desc'] = 'The name of the first course section to control. Default: 愿心加油站';
+$string['sectiondisplaymode'] = 'Section display mode';
+$string['sectiondisplaymode_desc'] = 'How to display the matching section on the course page.';
+$string['sectiondisplaymode_fold'] = 'Collapse (remember)';
+$string['sectiondisplaymode_hide'] = 'Do not show';
 
 // Entry view counting settings
 $string['enablerecordview'] = 'Enable Database entry view counting';
