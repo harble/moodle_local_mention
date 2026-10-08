@@ -6,7 +6,7 @@ $tasks = [
     [
         'classname' => 'local_mention\task\queue_processor',
         'blocking' => 0,
-        'minute' => '*/10',
+        'minute' => '*',
         'hour' => '*',
         'day' => '*',
         'month' => '*',

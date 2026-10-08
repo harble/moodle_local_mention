@@ -32,13 +32,27 @@ class database_observer {
 
     /**
      * 条目创建事件处理
+     *
+     * record_created 事件在 data_content 尚未写入（先于字段保存触发）时被抛出，
+     * 此时若同步解析 channels 会读不到值。因此改为调度 adhoc task 延迟数秒执行，
+     * 待字段落库后再解析审核人并发送通知。
      */
     public static function record_created(\mod_data\event\record_created $event): void {
-        self::handle_record_event($event);
+        $task = new \local_mention\task\database_review_notification();
+        $task->set_component('local_mention');
+        $task->set_custom_data([
+            'cmid' => $event->contextinstanceid,
+            'recordid' => $event->objectid,
+        ]);
+        // 延迟 5 秒，确保 data_content 已写入。
+        $task->set_next_run_time(time() + 5);
+        \core\task\manager::queue_adhoc_task($task);
     }
 
     /**
      * 条目更新事件处理
+     *
+     * record_updated 在所有字段（含 channels）落库之后才触发，无竞态，可同步处理。
      */
     public static function record_updated(\mod_data\event\record_updated $event): void {
         self::handle_record_event($event);
@@ -63,7 +77,7 @@ class database_observer {
      *    - 如果不存在，则创建新的初始通知，重置提醒周期
      */
     private static function handle_record_event($event): void {
-        global $DB, $CFG;
+        global $DB;
 
         // 获取条目数据
         $record = $DB->get_record('data_records', ['id' => $event->objectid]);
@@ -76,6 +90,22 @@ class database_observer {
         if (!$cm) {
             return;
         }
+
+        // 生成条目查看 URL
+        $url = (string) $event->get_url()->out();
+
+        self::process_record_review($cm, $record, $url);
+    }
+
+    /**
+     * 统一处理条目审核通知（record_created / record_updated / adhoc task 共用）
+     *
+     * @param \stdClass $cm 课程模块记录
+     * @param \stdClass $record data_records 记录
+     * @param string $url 条目查看 URL
+     */
+    public static function process_record_review(\stdClass $cm, \stdClass $record, string $url): void {
+        global $DB, $CFG;
 
         // 本地化条目中的外部图片（所有条目都处理，不限于待审核状态）
         self::localize_external_images($cm, $record);
@@ -128,7 +158,6 @@ class database_observer {
         }
 
         $context = \context_module::instance($cm->id);
-        $url = (string)$event->get_url()->out();
 
         // 查找该条目所有待发送的通知记录（status=0）
         // 这些记录可能是初始通知（seq=1）或尚未发送的周期提醒（seq>=2）

@@ -272,4 +272,14 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         300,  // 默认值：5分钟
         1  // 显示单位选项（1=天、小时、分钟）
     ));
+
+    // 通知处理任务执行间隔
+    // 控制 queue_processor 定时任务实际处理通知的频率（节流）
+    $settings->add(new admin_setting_configduration(
+        'local_mention/queue_process_interval',
+        get_string('queue_process_interval', 'local_mention'),
+        get_string('queue_process_interval_desc', 'local_mention'),
+        600,  // 默认值：10分钟
+        1  // 显示单位选项
+    ));
 }

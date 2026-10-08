@@ -61,10 +61,41 @@ class queue_processor extends \core\task\scheduled_task {
     }
 
     /**
+     * 获取通知处理任务的实际执行间隔（秒）
+     *
+     * 从配置 queue_process_interval 读取，未配置时使用默认值 10 分钟。
+     */
+    private static function get_process_interval(): int {
+        $seconds = get_config('local_mention', 'queue_process_interval');
+        if ($seconds === false || $seconds === null || $seconds === '') {
+            return 10 * MINSECS;
+        }
+        $seconds = (int)$seconds;
+        return ($seconds > 0) ? $seconds : 10 * MINSECS;
+    }
+
+    /**
      * 定时任务入口
      * 执行顺序：先处理待发送通知，再生成周期性提醒
+     *
+     * 通过配置节流：只有距上次实际处理达到配置间隔时才真正执行，
+     * 实现"执行频率可配置"，避免依赖 db/tasks.php 中硬编码的调度。
      */
     public function execute(): void {
+        $now = time();
+
+        // 获取本次应执行的时间间隔。
+        $interval = self::get_process_interval();
+
+        // 检查自上次执行是否已达配置间隔，未达则跳过本轮。
+        $lastrun = get_config('local_mention', 'queue_process_lastrun');
+        if ($lastrun !== false && $lastrun !== null && $lastrun !== '' && (int)$lastrun > $now - $interval) {
+            return;
+        }
+
+        // 记录本次执行时间，供后续节流判断。
+        set_config('queue_process_lastrun', $now, 'local_mention');
+
         $this->process_pending_notifications();
         $this->generate_periodic_reminders();
     }
