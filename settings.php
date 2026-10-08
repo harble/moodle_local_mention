@@ -49,6 +49,19 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         '15'   // rows（默认 8 行，调高到 15 行方便查看和编辑）
     ));
 
+    // 兜底审核人配置
+    // 当条目的 channels 无法匹配到任何审核人时，通知这些兜底接收人
+    // 未配置（留空）则不发送通知
+    $settings->add(new admin_setting_configtextarea(
+        'local_mention/fallback_reviewers',
+        get_string('fallback_reviewers', 'local_mention'),
+        get_string('fallback_reviewers_desc', 'local_mention'),
+        '',  // 默认值：空（未配置则不发通知）
+        PARAM_RAW,
+        '16',  // cols
+        '5'    // rows
+    ));
+
     // 自动内容审批配置
     // 选择需要自动内容审批的 Database 活动（多选）
     $settings->add(new admin_setting_configmultiselect(

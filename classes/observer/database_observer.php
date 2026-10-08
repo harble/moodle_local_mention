@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace local_mention\observer;
 
@@ -604,18 +604,40 @@ class database_observer {
     /**
      * 获取兜底审核人列表
      *
-     * 当无法通过 channels 匹配到审核人时，使用系统管理员作为兜底
-     * 这确保了即使配置不完善，通知也不会丢失
+     * 从配置（fallback_reviewers）读取指定接收人，支持换行/逗号/分号/空格分隔，
+     * 每项可为用户ID或用户名。
      *
-     * @return array 管理员ID数组
+     * 未配置兜底接收人时返回空数组，调用方因此不会发送通知。
+     *
+     * @return array 兜底接收人ID数组（可能为空）
      */
     private static function get_fallback_reviewers(): array {
         global $DB;
 
         $reviewerids = [];
-        $admins = get_admins();
-        foreach ($admins as $admin) {
-            $reviewerids[] = (int)$admin->id;
+
+        // No fallback reviewers configured: return empty so no notification is sent.
+        $config = get_config('local_mention', 'fallback_reviewers');
+        if (empty($config)) {
+            return $reviewerids;
+        }
+
+        // Accept newline, comma, Chinese comma, semicolon, Chinese semicolon or space as separators.
+        $items = preg_split('/[,，;；\s]+/u', (string)$config);
+        foreach ($items as $item) {
+            $item = trim($item);
+            if ($item === '') {
+                continue;
+            }
+            // Numeric value is treated as a user id, otherwise as a username.
+            if (is_numeric($item)) {
+                $user = $DB->get_record('user', ['id' => (int)$item]);
+            } else {
+                $user = $DB->get_record('user', ['username' => $item]);
+            }
+            if ($user) {
+                $reviewerids[] = (int)$user->id;
+            }
         }
 
         return array_values(array_unique(array_filter($reviewerids)));
