@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace local_mention\observer;
 
@@ -520,10 +520,10 @@ class database_observer {
         }
 
         // 查找 channels 字段（用于存储审核人分组的多选字段）
-        $channelsfield = $DB->get_record('data_fields', [
-            'dataid' => $cm->instance,
-            'description' => 'channels',
-        ]);
+        $channelsfield = $DB->get_record_sql(
+            "SELECT * FROM {data_fields} WHERE dataid = :dataid AND " . $DB->sql_compare_text('description') . " = :channels",
+            ['dataid' => $cm->instance, 'channels' => 'channels']
+        );
         if (!$channelsfield) {
             return self::get_fallback_reviewers();
         }
@@ -557,7 +557,10 @@ class database_observer {
         $fieldname = $data->name . '审批';
 
         // 查找该自定义字段
-        $userfield = $DB->get_record('user_info_field', ['name' => $fieldname]);
+        $userfield = $DB->get_record_sql(
+            "SELECT * FROM {user_info_field} WHERE " . $DB->sql_compare_text('name', 255) . " = :name",
+            ['name' => $fieldname]
+        );
         if (!$userfield) {
             return self::get_fallback_reviewers();
         }
