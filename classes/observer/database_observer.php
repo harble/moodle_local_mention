@@ -676,6 +676,46 @@ class database_observer {
     }
 
     /**
+     * 判断当前用户是否为某条目的审核人
+     *
+     * 复用条目审核人的解析规则（resolve_reviewer_ids + get_fallback_reviewers），
+     * 用于 mod/data 单视图/列表视图的审批权限控制：仅当当前用户是该条目的
+     * 审核人（或被配置为兜底审核人）时，才对其显示批准/撤销批准操作。
+     *
+     * 与发送通知时的一致性：resolve_reviewer_ids 内部会过滤掉条目创建人，
+     * 因此条目作者即便出现在审核人配置中也不会被判定为可审批自己的条目。
+     *
+     * @param \stdClass $cm    课程模块记录
+     * @param \stdClass $record 条目记录
+     * @return bool 当前用户是否有权审批该条目
+     */
+    public static function is_reviewer_for_record(\stdClass $cm, \stdClass $record): bool {
+        global $USER;
+
+        // 网站管理员（site admin，$CFG->siteadmins）始终拥有审批权。
+        if (is_siteadmin()) {
+            return true;
+        }
+
+        // 方案 A：在系统上下文授予了"管理员/经理"角色的用户同样放行。
+        // 注意：标准 Manager 角色并不拥有 moodle/site:config（那是 Admin 专属），
+        // 因此这里额外检查 Manager 在系统上下文的标志能力 moodle/course:update。
+        $systemcontext = \context_system::instance();
+        if (has_capability('moodle/site:config', $systemcontext)
+                || has_capability('moodle/course:update', $systemcontext)) {
+            return true;
+        }
+
+        $reviewers = self::resolve_reviewer_ids($cm, $record);
+        if (empty($reviewers)) {
+            // 无审核人时回到兜底审核人逻辑。
+            $reviewers = self::get_fallback_reviewers();
+        }
+
+        return in_array((int)$USER->id, array_map('intval', $reviewers), true);
+    }
+
+    /**
      * 将通知记录加入队列
      *
      * 在插入前检查是否已存在相同的待发送记录

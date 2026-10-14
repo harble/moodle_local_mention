@@ -300,4 +300,12 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         [],  // 默认值：空（专家不可修改任何字段）
         $fieldoptions
     ));
+
+    // 批准/撤销批准菜单的审核人过滤。
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enableapprovalfilter',
+        get_string('enable_approval_filter', 'local_mention'),
+        get_string('enable_approval_filter_desc', 'local_mention'),
+        1  // 默认启用
+    ));
 }

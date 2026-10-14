@@ -81,3 +81,7 @@ $string['entryviewcounttarget'] = '浏览计数插入位置（CSS 选择器）';
 $string['entryviewcounttarget_desc'] = '指定浏览计数徽章插入到哪个元素之后（例如，包含"最后编辑: ##timemodified##"的那一行）。留空则插入到记录容器顶部。';
 $string['entryviewdateformat'] = '条目视图时间格式';
 $string['entryviewdateformat_desc'] = '原生 Database 单条查看页面上 ##timeadded## / ##timemodified## 时间标签使用的 PHP strftime 格式。留空则保持默认。示例：%Y/%m/%d %H:%M 会显示为 2026/09/30 14:30。';
+
+// 审批菜单过滤。
+$string['enable_approval_filter'] = '按审核人隐藏批准/撤销批准菜单';
+$string['enable_approval_filter_desc'] = '在 Database 活动查看页面上，仅当当前用户是该条目的审核人（或被配置为兜底审核人）时，才对其显示"批准/撤销批准"菜单项。系统管理员始终拥有审批权。';

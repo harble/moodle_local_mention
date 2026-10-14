@@ -18,4 +18,12 @@ $functions = array(
         'type' => 'write',
         'ajax' => true,
     ),
+    'local_mention_check_approval_permission' => array(
+        'classname' => 'local_mention\\external\\approval_permissions',
+        'methodname' => 'execute',
+        'classpath' => '',
+        'description' => 'Return the subset of database records the current user is allowed to approve',
+        'type' => 'read',
+        'ajax' => true,
+    ),
 );

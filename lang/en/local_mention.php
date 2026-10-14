@@ -81,3 +81,7 @@ $string['entryviewcounttarget'] = 'Counter insertion point (CSS selector)';
 $string['entryviewcounttarget_desc'] = 'A CSS selector of the element after which the view counter badge is inserted (e.g. the row containing "Last edited: ##timemodified##"). Leave empty to prepend the badge to the top of the record container.';
 $string['entryviewdateformat'] = 'Entry view date format';
 $string['entryviewdateformat_desc'] = 'PHP strftime style format used for the ##timeadded## / ##timemodified## labels on the native Database single-record view page. Leave empty to keep the default. Example: %Y/%m/%d %H:%M produces 2026/09/30 14:30.';
+
+// Approval menu filtering.
+$string['enable_approval_filter'] = 'Hide approve/disapprove menu by reviewer';
+$string['enable_approval_filter_desc'] = 'On Database activity record view pages, only show the "approve/disapprove" menu items to the current user when they are an assigned reviewer of the entry (or are configured as a fallback reviewer). Site administrators always keep approval rights.';

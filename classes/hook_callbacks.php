@@ -430,4 +430,48 @@ class hook_callbacks {
         // always load the module with the current allow-list.
         $PAGE->requires->js_call_amd('local_mention/expert_field_lock', 'init', [$allowed]);
     }
+
+    /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * On Database activity record view pages, hide the approve/disapprove menu
+     * items for records the current user is not assigned as the reviewer of.
+     * The reviewer/approver resolution is done by the local_mention plugin; this
+     * only hides the menu entries client-side so no core templates are touched.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_approval_menu_filter(
+        before_footer_html_generation $hook
+    ): void {
+        global $PAGE;
+
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enableapprovalfilter');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
+        // Only operate on the native Database activity view page.
+        if (strpos($PAGE->url->out(), '/mod/data/view.php') === false) {
+            return;
+        }
+
+        // Only process module contexts for the Database activity.
+        if (!$PAGE->cm || $PAGE->cm->modname !== 'data') {
+            return;
+        }
+
+        // The core template only renders approve/disapprove actions when the
+        // user holds the approve capability; reuse the same gate to avoid
+        // injecting the filter where there is nothing to filter.
+        if (!has_capability('mod/data:approve', $PAGE->context)) {
+            return;
+        }
+
+        // Both the list view and the single-record view render ##actionsmenu##
+        // containers, so no further per-view gate is required. Pass the
+        // capability flag so the client short-circuits when nothing is rendered.
+        $PAGE->requires->js_call_amd('local_mention/approval_menu_filter', 'init', [true]);
+    }
 }
