@@ -282,4 +282,22 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         600,  // 默认值：10分钟
         1  // 显示单位选项
     ));
+
+    // 专家可编辑字段
+    // 当非作者、非管理员用户（专家）编辑 Database 条目时，仅允许其修改勾选的字段
+    $fieldoptions = [
+        'subject' => get_string('field_subject', 'local_mention'),
+        'description' => get_string('field_description', 'local_mention'),
+        'cover_page' => get_string('field_cover_page', 'local_mention'),
+        'share_file' => get_string('field_share_file', 'local_mention'),
+        'channels' => get_string('field_channels', 'local_mention'),
+        'code' => get_string('field_code', 'local_mention'),
+    ];
+    $settings->add(new admin_setting_configmultiselect(
+        'local_mention/expert_editable_fields',
+        get_string('expert_editable_fields', 'local_mention'),
+        get_string('expert_editable_fields_desc', 'local_mention'),
+        [],  // 默认值：空（专家不可修改任何字段）
+        $fieldoptions
+    ));
 }

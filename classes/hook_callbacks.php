@@ -372,4 +372,62 @@ class hook_callbacks {
             }
         }
     }
+
+    /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * On the Database activity entry-edit page (/mod/data/edit.php), when the
+     * current user is editing an existing record and is neither the record
+     * author nor a site admin (i.e. an "expert"), the fields that are not in the
+     * configured editable list are disabled (read-only). Fields are matched by
+     * the title attribute of their wrapper <div>.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_expert_editable(
+        before_footer_html_generation $hook
+    ): void {
+        global $PAGE, $DB, $USER;
+
+        // Only operate on the Database activity edit page.
+        if (strpos($PAGE->url->out(), '/mod/data/edit.php') === false) {
+            return;
+        }
+
+        // A record edit always carries a rid parameter. New-entry pages (no rid)
+        // are not affected.
+        $rid = optional_param('rid', 0, PARAM_INT);
+        if ($rid <= 0) {
+            return;
+        }
+
+        // Retrieve the record author to decide whether the current user is an
+        // "expert" (neither the author nor a site admin).
+        $authorid = $DB->get_field('data_records', 'userid', ['id' => $rid]);
+        if ($authorid === false) {
+            return;
+        }
+
+        // Site admins and the record author keep full editing rights.
+        if (is_siteadmin() || (int)$authorid === (int)$USER->id) {
+            return;
+        }
+
+        // Build the list of fields the expert is allowed to edit from the
+        // configured multiselect. Empty selection means the expert cannot edit
+        // any field.
+        $allowed = get_config('local_mention', 'expert_editable_fields');
+        if ($allowed === false || $allowed === '') {
+            $allowed = [];
+        } else {
+            $allowed = array_values(array_filter(array_map('trim', explode(',', (string)$allowed))));
+        }
+        $allowed = array_values(array_filter($allowed, function($v) {
+            return in_array($v, ['subject', 'description', 'cover_page', 'share_file', 'channels', 'code'], true);
+        }));
+
+        // Even with an empty allow-list we still want to disable all fields, so
+        // always load the module with the current allow-list.
+        $PAGE->requires->js_call_amd('local_mention/expert_field_lock', 'init', [$allowed]);
+    }
 }
