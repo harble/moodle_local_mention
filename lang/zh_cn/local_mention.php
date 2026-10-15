@@ -85,3 +85,20 @@ $string['entryviewdateformat_desc'] = '原生 Database 单条查看页面上 ##t
 // 审批菜单过滤。
 $string['enable_approval_filter'] = '按审核人隐藏批准/撤销批准菜单';
 $string['enable_approval_filter_desc'] = '在 Database 活动查看页面上，仅当当前用户是该条目的审核人（或被配置为兜底审核人）时，才对其显示"批准/撤销批准"菜单项。系统管理员始终拥有审批权。';
+
+// 驳回功能。
+$string['reject'] = '驳回';
+$string['reject_dialogtitle'] = '驳回条目';
+$string['reject_reasonlabel'] = '驳回理由';
+$string['reject_reasonplaceholder'] = '请输入驳回理由…';
+$string['reject_history'] = '历史驳回理由';
+$string['reject_submit'] = '确认驳回并通知作者';
+$string['reject_cancel'] = '取消';
+$string['reject_success'] = '已驳回该条目并通知作者。';
+$string['reject_failed'] = '驳回失败：{$a}';
+$string['reject_loadfailed'] = '加载历史驳回理由失败';
+$string['reject_norecord'] = '未找到该条目。';
+$string['reject_nopermission'] = '您没有权限驳回该条目。';
+$string['reject_noreason'] = '请填写驳回理由。';
+$string['reject_subject'] = '您在[{$a->dataname}]分享的条目已被驳回，请及时修改';
+$string['reject_content'] = '<p>您在「{$a->dataname}」分享的条目已被驳回。请根据以下理由修改后重新提交</p><p>条目主题：{$a->subject}</p><p>驳回理由：</p><blockquote>{$a->reason}</blockquote><p><a href="{$a->url}">查看条目</a></p>';

@@ -26,4 +26,20 @@ $functions = array(
         'type' => 'read',
         'ajax' => true,
     ),
+    'local_mention_get_rejections' => array(
+        'classname' => 'local_mention\\external\\approval_reject',
+        'methodname' => 'get_rejections',
+        'classpath' => '',
+        'description' => 'Return the rejection history for a database record',
+        'type' => 'read',
+        'ajax' => true,
+    ),
+    'local_mention_reject_record' => array(
+        'classname' => 'local_mention\\external\\approval_reject',
+        'methodname' => 'reject_record',
+        'classpath' => '',
+        'description' => 'Reject a database record and notify its author',
+        'type' => 'write',
+        'ajax' => true,
+    ),
 );

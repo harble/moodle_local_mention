@@ -85,3 +85,20 @@ $string['entryviewdateformat_desc'] = 'PHP strftime style format used for the ##
 // Approval menu filtering.
 $string['enable_approval_filter'] = 'Hide approve/disapprove menu by reviewer';
 $string['enable_approval_filter_desc'] = 'On Database activity record view pages, only show the "approve/disapprove" menu items to the current user when they are an assigned reviewer of the entry (or are configured as a fallback reviewer). Site administrators always keep approval rights.';
+
+// Rejection feature.
+$string['reject'] = 'Reject';
+$string['reject_dialogtitle'] = 'Reject entry';
+$string['reject_reasonlabel'] = 'Rejection reason';
+$string['reject_reasonplaceholder'] = 'Enter the rejection reason…';
+$string['reject_history'] = 'Rejection history';
+$string['reject_submit'] = 'Reject and notify author';
+$string['reject_cancel'] = 'Cancel';
+$string['reject_success'] = 'The entry has been rejected and the author notified.';
+$string['reject_failed'] = 'Rejection failed: {$a}';
+$string['reject_loadfailed'] = 'Failed to load rejection history';
+$string['reject_norecord'] = 'Entry not found.';
+$string['reject_nopermission'] = 'You are not allowed to reject this entry.';
+$string['reject_noreason'] = 'Please enter a rejection reason.';
+$string['reject_subject'] = 'Your entry shared in "{$a->dataname}" has been rejected. Please revise it promptly';
+$string['reject_content'] = '<p>Your entry shared in "{$a->dataname}" has been rejected. Please revise it according to the reason below and resubmit</p><p>Entry subject: {$a->subject}</p><p>Rejection reason:</p><blockquote>{$a->reason}</blockquote><p><a href="{$a->url}">View entry</a></p>';

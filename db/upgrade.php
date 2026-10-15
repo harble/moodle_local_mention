@@ -86,5 +86,25 @@ function xmldb_local_mention_upgrade($oldversion) {
         upgrade_plugin_savepoint($result, 2026091606, 'local', 'mention');
     }
 
+    // 从 2026091612 升级：添加驳回记录表 local_mention_rejection
+    if ($oldversion < 2026091612) {
+        $table = new xmldb_table('local_mention_rejection');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('recordid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('reviewerid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('reason', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('recordid', XMLDB_INDEX_NOTUNIQUE, ['recordid']);
+        $table->add_index('reviewerid', XMLDB_INDEX_NOTUNIQUE, ['reviewerid']);
+
+        $dbman = $DB->get_manager();
+        $dbman->create_table($table);
+
+        upgrade_plugin_savepoint($result, 2026091612, 'local', 'mention');
+    }
+
     return $result;
 }
