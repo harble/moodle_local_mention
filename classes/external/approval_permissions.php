@@ -63,6 +63,9 @@ class approval_permissions extends external_api {
             'permitted' => new external_multiple_structure(
                 new external_value(PARAM_INT, 'Record id the current user may approve')
             ),
+            'keepmenu' => new external_multiple_structure(
+                new external_value(PARAM_INT, 'Record id whose entire actions menu should be kept')
+            ),
         ]);
     }
 
@@ -73,15 +76,16 @@ class approval_permissions extends external_api {
      * @return array
      */
     public static function execute(array $recordids = []): array {
-        global $DB;
+        global $DB, $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), ['recordids' => $recordids]);
         $recordids = array_values(array_unique(array_filter(array_map('intval', $params['recordids']))));
         if (empty($recordids)) {
-            return ['permitted' => []];
+            return ['permitted' => [], 'keepmenu' => []];
         }
 
         $permitted = [];
+        $keepmenu = [];
 
         // Fetch all records in one query.
         $records = [];
@@ -121,9 +125,15 @@ class approval_permissions extends external_api {
 
             if (database_observer::is_reviewer_for_record($cm, $record)) {
                 $permitted[] = (int)$record->id;
+                $keepmenu[] = (int)$record->id;
+            } else if ((int)$record->userid === (int)$USER->id) {
+                // The author of the entry keeps their full actions menu (they
+                // may edit/delete their own entry) even though they are not an
+                // approver. Only the menu is kept; no reject action is injected.
+                $keepmenu[] = (int)$record->id;
             }
         }
 
-        return ['permitted' => $permitted];
+        return ['permitted' => $permitted, 'keepmenu' => $keepmenu];
     }
 }

@@ -277,27 +277,26 @@ export const init = (canApproveCapability) => {
         }])[0]
             .done((data) => {
                 const permitted = new Set((data && data.permitted || []).map((id) => parseInt(id, 10)));
+                const keepmenu = new Set((data && data.keepmenu || []).map((id) => parseInt(id, 10)));
                 recordids.forEach((rid) => {
                     const menu = menus.get(rid);
-                    if (permitted.has(rid)) {
-                        // Inject the reject item for permitted records.
-                        addRejectAction(menu.container, rid);
+                    if (keepmenu.has(rid)) {
+                        // Keep the whole action menu. If the user is also an
+                        // approver of this record, inject the reject item.
+                        if (permitted.has(rid)) {
+                            addRejectAction(menu.container, rid);
+                        }
                         return;
                     }
-                    // Remove the approve/disapprove links that are not permitted
-                    // for this record.
-                    menu.links.forEach(({link}) => {
-                        link.remove();
-                    });
-                    // If the kebab menu holds no other action, hide the whole menu.
-                    const remaining = menu.container.querySelectorAll('a[href]').length;
-                    if (remaining === 0) {
-                        const trigger = menu.container.querySelector('.dropdown-toggle, .icon-no-margin, button');
-                        if (trigger) {
-                            trigger.closest('.entry-actionsmenu, .no-overflow')?.remove();
-                        }
-                        menu.container.remove();
+                    // Not the author nor an approver of this record. These
+                    // roles hold no edit/delete/approve rights here, so the
+                    // whole actions menu can be removed (it would otherwise
+                    // only hold an inert approve item).
+                    const trigger = menu.container.querySelector('.dropdown-toggle, .icon-no-margin, button');
+                    if (trigger) {
+                        trigger.closest('.entry-actionsmenu, .no-overflow')?.remove();
                     }
+                    menu.container.remove();
                 });
             })
             .fail(() => {
