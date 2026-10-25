@@ -61,4 +61,8 @@ $callbacks = [
         'hook' => \core\hook\output\before_standard_head_html_generation::class,
         'callback' => [\local_mention\hook_callbacks::class, 'before_standard_head_html_generation_entry_view'],
     ],
+    [
+        'hook' => \core\hook\output\before_http_headers::class,
+        'callback' => [\local_mention\hook_callbacks::class, 'before_http_headers'],
+    ],
 ];

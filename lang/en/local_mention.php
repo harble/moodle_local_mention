@@ -86,6 +86,10 @@ $string['entryviewdateformat_desc'] = 'PHP strftime style format used for the ##
 $string['enable_approval_filter'] = 'Hide approve/disapprove menu by reviewer';
 $string['enable_approval_filter_desc'] = 'On Database activity record view pages, only show the "approve/disapprove" menu items to the current user when they are an assigned reviewer of the entry (or are configured as a fallback reviewer). Site administrators always keep approval rights.';
 
+// Course management default category.
+$string['enable_category_default'] = 'Default course management page to a manageable category';
+$string['enable_category_default_desc'] = 'When a user only holds a course management role on a sub-category, visiting /course/management.php (without a categoryid) redirects them straight to the first category they can manage. Site administrators keep the core default behaviour (first top-level child).';
+
 // Rejection feature.
 $string['reject'] = 'Reject';
 $string['reject_dialogtitle'] = 'Reject entry';

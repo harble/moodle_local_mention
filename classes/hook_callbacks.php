@@ -474,4 +474,89 @@ class hook_callbacks {
         // capability flag so the client short-circuits when nothing is rendered.
         $PAGE->requires->js_call_amd('local_mention/approval_menu_filter', 'init', [true]);
     }
+
+    /**
+     * Callback for the before_http_headers output hook.
+     *
+     * When a non-admin user with category management capabilities opens
+     * /course/management.php without explicitly specifying a categoryid, core
+     * defaults to the first top-level child category. If that user only holds
+     * a management role on a sub-category, redirect them straight into the
+     * first category they can actually manage (equivalent to appending
+     * ?categoryid=X to the URL).
+     *
+     * This runs before any HTTP headers are sent, so the redirect is safe.
+     *
+     * @param \core\hook\output\before_http_headers $hook The hook instance.
+     */
+    public static function before_http_headers(\core\hook\output\before_http_headers $hook): void {
+        global $CFG, $USER, $PAGE;
+
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enablecategorydefault');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
+        // Safari/legacy contexts skipped; only operate on the course management page.
+        if ($PAGE === null || strpos($PAGE->url->out(), '/course/management.php') === false) {
+            return;
+        }
+
+        // Only when landing without an explicit category selection.
+        $categoryid = optional_param('categoryid', null, PARAM_INT);
+        $courseid = optional_param('courseid', null, PARAM_INT);
+        if ($categoryid !== null || $courseid !== null) {
+            return;
+        }
+
+        // Never redirect the site admin or guests.
+        if (is_siteadmin() || isguestuser() || !isloggedin()) {
+            return;
+        }
+
+        require_once($CFG->dirroot . '/course/lib.php');
+
+        // Two-level priority lookup for the default landing category:
+        //  1. Categories where the user holds a category management role
+        //     (moodle/category:manage).
+        //  2. Otherwise, categories where the user holds a course creator role
+        //     (moodle/course:create, e.g. the stock "Course creator" role or any
+        //     role derived from that archetype), which allows course creation.
+        //
+        // Note: make_categories_list() uses has_all_capabilities(), so a single
+        // call with both capabilities requires the user to have BOTH. They are
+        // therefore queried separately to honour the "any of" semantics.
+        $candidates = [];
+        $manageable = \core_course_category::make_categories_list(['moodle/category:manage']);
+        if (!empty($manageable)) {
+            $candidates = array_keys($manageable);
+        } else {
+            $creatable = \core_course_category::make_categories_list(['moodle/course:create']);
+            $candidates = array_keys($creatable);
+        }
+        if (empty($candidates)) {
+            return;
+        }
+
+        $targetid = (int) reset($candidates);
+
+        // Determine the category core would default to (first top-level child).
+        $topchildren = \core_course_category::top()->get_children();
+        if (empty($topchildren)) {
+            return;
+        }
+        $defaultcategory = reset($topchildren);
+        $defaultid = (int) $defaultcategory->id;
+
+        // No redirect needed when the first manageable category already equals
+        // the default landing category.
+        if ($targetid === $defaultid) {
+            return;
+        }
+
+        redirect(
+            new \moodle_url('/course/management.php', ['categoryid' => $targetid])
+        );
+    }
 }

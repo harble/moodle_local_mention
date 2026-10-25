@@ -86,6 +86,10 @@ $string['entryviewdateformat_desc'] = '原生 Database 单条查看页面上 ##t
 $string['enable_approval_filter'] = '按审核人隐藏批准/撤销批准菜单';
 $string['enable_approval_filter_desc'] = '在 Database 活动查看页面上，仅当当前用户是该条目的审核人（或被配置为兜底审核人）时，才对其显示"批准/撤销批准"菜单项。系统管理员始终拥有审批权。';
 
+// 课程管理页缺省分类跳转。
+$string['enable_category_default'] = '课程管理页缺省进入用户可管理的分类';
+$string['enable_category_default_desc'] = '当用户只对某个子分类拥有课程管理角色时，访问 /course/management.php（未指定 categoryid）会直接重定向到该用户可管理的第一个分类。系统管理员仍按 core 默认行为进入第一个顶级子分类。';
+
 // 驳回功能。
 $string['reject'] = '驳回';
 $string['reject_dialogtitle'] = '驳回条目';

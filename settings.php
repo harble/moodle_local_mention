@@ -308,4 +308,14 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         get_string('enable_approval_filter_desc', 'local_mention'),
         1  // 默认启用
     ));
+
+    // 课程管理页缺省分类跳转。
+    // 当用户只对某个子分类有管理角色时，访问 /course/management.php 直接进入
+    // 该用户可管理的第一个分类，否则 core 会默认跳到第一个顶级子分类。
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enablecategorydefault',
+        get_string('enable_category_default', 'local_mention'),
+        get_string('enable_category_default_desc', 'local_mention'),
+        1  // 默认启用
+    ));
 }
