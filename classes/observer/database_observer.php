@@ -12,7 +12,7 @@ defined('MOODLE_INTERNAL') || die();
  *
  * 一、审核通知
  *   当学生提交/更新待审核条目时，自动通知相关审核人员。
- *   核心流程（handle_record_event）：
+ *   核心流程（process_record_review）：
  *   1. 本地化条目中的外部图片（见功能二）
  *   2. 检查条目是否仍为待审核状态（approved=0）
  *   3. 解析审核人列表（resolve_reviewer_ids）
@@ -44,57 +44,30 @@ class database_observer {
             'cmid' => $event->contextinstanceid,
             'recordid' => $event->objectid,
         ]);
-        // 延迟 5 秒，确保 data_content 已写入。
-        $task->set_next_run_time(time() + 5);
+        // 延迟 2 秒，确保 data_content 已写入。
+        $task->set_next_run_time(time() + 2);
         \core\task\manager::queue_adhoc_task($task);
     }
 
     /**
      * 条目更新事件处理
      *
-     * record_updated 在所有字段（含 channels）落库之后才触发，无竞态，可同步处理。
+     * record_updated 事件虽然在各字段（含 channels）落库之后才触发，无字段竞态；
+     * 但 mod_data 在 edit.php 中先触发本事件、之后才执行 core_tag_tag::set_item_tags()
+     * 写标签。若同步处理，读取到的 draft 等标签仍是保存前的旧值，导致
+     * "去草稿保存后要再保存一次才被识别为已去草稿"的滞后。
+     * 因此同样改为调度 adhoc task 延迟执行，待新标签落库后再判定草稿并自动审批。
      */
     public static function record_updated(\mod_data\event\record_updated $event): void {
-        self::handle_record_event($event);
-    }
-
-    /**
-     * 处理条目事件（创建或更新）
-     *
-     * 完整流程：
-     * 1. 获取条目数据，检查审核状态（已审核则跳过）
-     * 2. 获取课程模块信息
-     * 3. 解析审核人列表
-     * 4. 查找该条目所有待发送的通知记录（status=0）
-     *    - 更新它们的 userto 为最新审核人列表
-     *    - 更新 subject/content 为最新内容
-     *    - 应对 channels 变更导致的审核人变化
-     * 5. 退休所有非待发送的活跃记录（seq>=1, status!=0）
-     *    - 将 seq 设为 -id，确保唯一键不冲突
-     *    - 这些记录已发送/已取消，不再需要参与周期提醒
-     * 6. 判断是否需要创建新的 seq=1 记录
-     *    - 如果存在待发送的 seq=1 记录，不需要新建（已在第4步更新）
-     *    - 如果不存在，则创建新的初始通知，重置提醒周期
-     */
-    private static function handle_record_event($event): void {
-        global $DB;
-
-        // 获取条目数据
-        $record = $DB->get_record('data_records', ['id' => $event->objectid]);
-        if (!$record) {
-            return;
-        }
-
-        // 获取课程模块信息
-        $cm = $DB->get_record('course_modules', ['id' => $event->contextinstanceid]);
-        if (!$cm) {
-            return;
-        }
-
-        // 生成条目查看 URL
-        $url = (string) $event->get_url()->out();
-
-        self::process_record_review($cm, $record, $url);
+        $task = new \local_mention\task\database_review_notification();
+        $task->set_component('local_mention');
+        $task->set_custom_data([
+            'cmid' => $event->contextinstanceid,
+            'recordid' => $event->objectid,
+        ]);
+        // 延迟 2 秒，确保 core_tag_tag::set_item_tags() 已完成标签写入。
+        $task->set_next_run_time(time() + 2);
+        \core\task\manager::queue_adhoc_task($task);
     }
 
     /**
@@ -136,13 +109,24 @@ class database_observer {
             $sensitivewarning = get_string('sensitive_warning', 'local_mention', implode(', ', $matchedwords));
         }
 
+        // 草稿检查：标签中含 "draft"（不区分大小写）的条目视为草稿。
+        // 草稿仅是暂存状态，不应进入自动内容审批，需等去除草稿标签后再审批。
+        $isdraft = false;
+        $tags = \core_tag_tag::get_item_tags_array('mod_data', 'data_records', $record->id);
+        foreach ($tags as $tagname) {
+            if (stripos($tagname, 'draft') !== false) {
+                $isdraft = true;
+                break;
+            }
+        }
+
         // 自动内容审批检查
-        // 如果该 Database 活动已配置自动内容审批，且条目内容无敏感词，则自动完成审核，跳过通知流程
+        // 如果该 Database 活动已配置自动内容审批，且条目内容无敏感词，且非草稿，则自动完成审核，跳过通知流程
         $autoapprovedatabases = get_config('local_mention', 'auto_approve_databases');
         if (!empty($autoapprovedatabases)) {
             $autoapproveids = explode(',', $autoapprovedatabases);
             $autoapproveids = array_map('trim', $autoapproveids);
-            if (!empty($cm->instance) && in_array((string)$cm->instance, $autoapproveids, true) && empty($matchedwords)) {
+            if (!empty($cm->instance) && in_array((string)$cm->instance, $autoapproveids, true) && empty($matchedwords) && !$isdraft) {
                 require_once($CFG->dirroot . '/mod/data/locallib.php');
                 data_approve_entry($record->id, true);
 

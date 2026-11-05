@@ -476,6 +476,56 @@ class hook_callbacks {
     }
 
     /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * Adds a "Save draft" button to the Database activity add/edit sticky
+     * footer. Clicking it saves the current entry while ensuring the
+     * "草稿(DRAFT)" tag is included; clicking "Save" acts as a publish and
+     * removes the draft tag. This keeps the "draft skips auto-approval"
+     * background logic consistent with what the user intends to do.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_draft_save(before_footer_html_generation $hook): void {
+        global $PAGE, $DB, $CFG;
+
+        // Only operate on the native Database activity add/edit page.
+        if (strpos($PAGE->url->out(), '/mod/data/edit.php') === false) {
+            return;
+        }
+
+        // Only process module contexts for the Database activity.
+        if (!$PAGE->cm || $PAGE->cm->modname !== 'data') {
+            return;
+        }
+
+        // A brand new entry (no rid) is never approved yet, so draft saving is
+        // always meaningful for it.
+        $rid = optional_param('rid', 0, PARAM_INT);
+        $showdraft = ($rid === 0);
+
+        if (!$showdraft) {
+            // For an existing entry, only offer "Save draft" when the current
+            // user is allowed to manage it. Reusing Moodle's own check means an
+            // approved entry that cannot be edited (e.g. "Allow editing of
+            // approved entries" is disabled) gets no draft button, while an
+            // approved entry that can be edited keeps one.
+            require_once($CFG->dirroot . '/mod/data/lib.php');
+            $data = $DB->get_record('data', ['id' => (int) $PAGE->cm->instance], '*', MUST_EXIST);
+            $context = context_module::instance($PAGE->cm->id);
+            if (data_user_can_manage_entry($rid, $data, $context)) {
+                $showdraft = true;
+            }
+        }
+
+        // Pass the "Save draft" label and whether the draft button should be
+        // shown for the current entry.
+        $savelabel = get_string('savedraft', 'local_mention');
+
+        $PAGE->requires->js_call_amd('local_mention/data_draft_save', 'init', [$savelabel, $showdraft]);
+    }
+
+    /**
      * Callback for the before_http_headers output hook.
      *
      * When a non-admin user with category management capabilities opens

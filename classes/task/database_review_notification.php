@@ -13,7 +13,12 @@ defined('MOODLE_INTERNAL') || die();
  * 若在该事件回调中立即解析条目的 channels 值会读到空。因此观察者 record_created
  * 只负责调度本任务并延迟数秒后执行，届时字段已落库，再调用统一的审核通知流程。
  *
- * record_created 与 record_updated（无竞态）最终都汇入 database_observer::
+ * 另：record_updated 事件同样存在时序问题——mod_data 在 edit.php 中先触发该事件、
+ * 之后才执行 core_tag_tag::set_item_tags() 写入标签。若同步处理会读到保存前的旧标签，
+ * 导致草稿状态判断滞后。因此 record_updated 也调度本任务延迟片刻执行，
+ * 待新标签落库后再判定草稿并自动审批。
+ *
+ * record_created 与 record_updated 最终都汇入 database_observer::
  * process_record_review() 统一处理。
  */
 class database_review_notification extends \core\task\adhoc_task {

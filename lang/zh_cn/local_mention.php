@@ -2,6 +2,7 @@
 // This file is part of Moodle - http://moodle.org/
 
 $string['pluginname'] = '分享服务';
+$string['savedraft'] = '保存草稿';
 $string['privacy:metadata'] = 'local_mention 插件会存储提及通知。';
 $string['messageprovider:mentions'] = '提及通知';
 $string['mentionnotificationsubject'] = '{$a->author} 提及了你：{$a->item}';
