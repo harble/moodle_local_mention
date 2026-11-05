@@ -446,12 +446,6 @@ class hook_callbacks {
     ): void {
         global $PAGE;
 
-        // Respect the admin setting.
-        $enable = get_config('local_mention', 'enableapprovalfilter');
-        if ($enable === false || (bool)$enable === false) {
-            return;
-        }
-
         // Only operate on the native Database activity view page.
         if (strpos($PAGE->url->out(), '/mod/data/view.php') === false) {
             return;
@@ -462,17 +456,53 @@ class hook_callbacks {
             return;
         }
 
-        // The core template only renders approve/disapprove actions when the
-        // user holds the approve capability; reuse the same gate to avoid
-        // injecting the filter where there is nothing to filter.
-        if (!has_capability('mod/data:approve', $PAGE->context)) {
+        // The reject action is only relevant when the approval filter is
+        // enabled and the user holds the approve capability. Reuse the same
+        // gate as the core template to avoid injecting the filter where there
+        // is nothing to filter.
+        $approvalfilter = get_config('local_mention', 'enableapprovalfilter');
+        $canapprove = (bool)$approvalfilter && has_capability('mod/data:approve', $PAGE->context);
+
+        // Review-only mode: when enabled, for Database activities that are NOT
+        // listed in "auto_approve_databases", hide the "Edit/Delete" items in
+        // the record action menus for everyone except system administrators.
+        // This must work regardless of the approve capability (the affected
+        // users are typically the record authors, who usually lack it).
+        $hideeditdelete = false;
+        $reviewonly = get_config('local_mention', 'enablereviewonly');
+        if ((bool)$reviewonly) {
+            $autolist = get_config('local_mention', 'auto_approve_databases');
+            $inauto = false;
+            foreach (explode(',', (string)$autolist) as $id) {
+                if ((int)$id === (int)$PAGE->cm->instance) {
+                    $inauto = true;
+                    break;
+                }
+            }
+            if (!$inauto) {
+                $systemctx = \context_system::instance();
+                $systemadmin = is_siteadmin()
+                    || has_capability('moodle/site:config', $systemctx)
+                    || has_capability('moodle/course:update', $systemctx);
+                if (!$systemadmin) {
+                    $hideeditdelete = true;
+                }
+            }
+        }
+
+        // Nothing to do for this user (no reject items and nothing to hide).
+        if (!$canapprove && !$hideeditdelete) {
             return;
         }
 
         // Both the list view and the single-record view render ##actionsmenu##
-        // containers, so no further per-view gate is required. Pass the
-        // capability flag so the client short-circuits when nothing is rendered.
-        $PAGE->requires->js_call_amd('local_mention/approval_menu_filter', 'init', [true]);
+        // containers, so no further per-view gate is required. Pass the flags
+        // so the client short-circuits when nothing is rendered.
+        $PAGE->requires->js_call_amd(
+            'local_mention/approval_menu_filter',
+            'init',
+            [$canapprove, $hideeditdelete]
+        );
     }
 
     /**

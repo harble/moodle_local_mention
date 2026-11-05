@@ -88,6 +88,10 @@ $string['entryviewdateformat_desc'] = 'PHP strftime style format used for the ##
 $string['enable_approval_filter'] = 'Hide approve/disapprove menu by reviewer';
 $string['enable_approval_filter_desc'] = 'On Database activity record view pages, only show the "approve/disapprove" menu items to the current user when they are an assigned reviewer of the entry (or are configured as a fallback reviewer). Site administrators always keep approval rights.';
 
+// Review-only permission: hide edit/delete menus for non-auto-approved activities.
+$string['enable_review_only'] = 'Review-only: hide edit/delete for activities not auto-approved';
+$string['enable_review_only_desc'] = 'When enabled, for Database activities that are NOT listed in the "automatic content approval" setting, all related users except system administrators (site admin or system-level administrator/manager) no longer see the "Edit" and "Delete" items in the record action menus; only approve/reject operations remain.';
+
 // Course management default category.
 $string['enable_category_default'] = 'Default course management page to a manageable category';
 $string['enable_category_default_desc'] = 'When a user only holds a course management role on a sub-category, visiting /course/management.php (without a categoryid) redirects them straight to the first category they can manage. Site administrators keep the core default behaviour (first top-level child).';

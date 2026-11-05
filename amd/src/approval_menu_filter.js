@@ -232,18 +232,54 @@ const openRejectDialog = async (recordid) => {
 };
 
 /**
+ * Remove the "Edit" and "Delete" items from an actions menu. This is used by
+ * the review-only mode to strip those items from every record menu for the
+ * current user, leaving only approve/reject (and any other) actions.
+ *
+ * @param {HTMLElement} container The ##actionsmenu## container.
+ */
+const removeEditDelete = (container) => {
+    const dropdown = container.querySelector('.dropdown-menu, .dropdown-menu-end');
+    if (!dropdown) {
+        return;
+    }
+    dropdown.querySelectorAll('a[href]').forEach((link) => {
+        const href = link.getAttribute('href') || '';
+        // Edit links point to /mod/data/edit.php; delete links carry a
+        // "delete=" query parameter. Approve/disapprove links are unaffected.
+        if (href.includes('/edit.php') || /[?&]delete=/.test(href)) {
+            link.remove();
+        }
+    });
+};
+
+/**
  * @param {boolean} canApproveCapability Whether the user holds mod/data:approve
  *                                       (informational; the server re-checks).
+ * @param {boolean} hideEditDelete Whether the review-only mode should hide the
+ *                                 Edit/Delete items for every record menu.
  */
-export const init = (canApproveCapability) => {
+export const init = (canApproveCapability, hideEditDelete) => {
+    const containers = Array.from(document.querySelectorAll('.entry-actionsmenu'));
+    if (containers.length === 0) {
+        return;
+    }
+
+    // Review-only mode hides edit/delete for this user even when they are not
+    // an approver (typically the record authors), so it must not depend on the
+    // approve capability.
+    if (hideEditDelete) {
+        containers.forEach(removeEditDelete);
+    }
+
     if (!canApproveCapability) {
-        // Without the approve capability core does not render these items anyway.
+        // Without the approve capability core does not render approve items anyway.
         return;
     }
 
     // Collect menu containers that contain an approve or disapprove link.
     const menus = new Map(); // recordid -> {container, links[]}
-    document.querySelectorAll('.entry-actionsmenu').forEach((container) => {
+    containers.forEach((container) => {
         const links = [];
         container.querySelectorAll('a[href]').forEach((link) => {
             const href = link.getAttribute('href');

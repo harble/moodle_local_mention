@@ -88,6 +88,10 @@ $string['entryviewdateformat_desc'] = '原生 Database 单条查看页面上 ##t
 $string['enable_approval_filter'] = '按审核人隐藏批准/撤销批准菜单';
 $string['enable_approval_filter_desc'] = '在 Database 活动查看页面上，仅当当前用户是该条目的审核人（或被配置为兜底审核人）时，才对其显示"批准/撤销批准"菜单项。系统管理员始终拥有审批权。';
 
+// 仅赋予审核权限：隐藏相关人员对未自动审批活动的编辑/删除菜单。
+$string['enable_review_only'] = '仅赋予审核权限：隐藏未自动审批活动的人员编辑/删除菜单';
+$string['enable_review_only_desc'] = '启用后，对于未列入"自动内容审批"配置中的 Database 活动，除系统管理员（超管或系统级管理员/经理）外，所有相关人员在该活动条目的查看菜单中均不再显示"编辑"和"删除"菜单项，仅保留审批/驳回（及符合条件时的打分等）操作。';
+
 // 课程管理页缺省分类跳转。
 $string['enable_category_default'] = '课程管理页缺省进入用户可管理的分类';
 $string['enable_category_default_desc'] = '当用户只对某个子分类拥有课程管理角色时，访问 /course/management.php（未指定 categoryid）会直接重定向到该用户可管理的第一个分类。系统管理员仍按 core 默认行为进入第一个顶级子分类。';
