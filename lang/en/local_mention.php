@@ -106,3 +106,9 @@ $string['reject_nopermission'] = 'You are not allowed to reject this entry.';
 $string['reject_noreason'] = 'Please enter a rejection reason.';
 $string['reject_subject'] = 'Your entry shared in "{$a->dataname}" has been rejected. Please revise it promptly';
 $string['reject_content'] = '<p>Your entry shared in "{$a->dataname}" has been rejected. Please revise it according to the reason below and resubmit</p><p>Entry subject: {$a->subject}</p><p>Rejection reason:</p><blockquote>{$a->reason}</blockquote><p><a href="{$a->url}">View entry</a></p>';
+
+// Page element hiding feature.
+$string['enable_element_hider'] = 'Enable role based page element hiding';
+$string['enable_element_hider_desc'] = 'When enabled, hides the page elements defined by the rules below.';
+$string['element_hider_rules'] = 'Page element hiding rules';
+$string['element_hider_rules_desc'] = 'One rule per line, format: roles | CSS selector | note<br>Roles: fill in the role "Custom full name"s; separate multiple roles with English or Chinese commas. Leave empty or use ALL (case-insensitive) to apply to every user.<br>CSS selector: the selector of the element to hide, e.g. .block_xxx or #some-id.<br>Note: only for administration readability, not used in the hiding logic.<br>Examples:<pre>Reviewer,Manager | .block_vitrina | Homepage sidebar<br> | .block_totop | Hidden for everyone<br>ALL | #footer | Hide globally</pre>';

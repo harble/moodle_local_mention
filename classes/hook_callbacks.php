@@ -559,4 +559,47 @@ class hook_callbacks {
             new \moodle_url('/course/management.php', ['categoryid' => $targetid])
         );
     }
+
+    /**
+     * Callback for before_standard_head_html_generation hook.
+     *
+     * If the "hide page elements" feature is enabled, injects a <style> tag
+     * into <head> that hides the CSS selectors matching the current user's
+     * role. Because the CSS is applied before the body is first rendered,
+     * the hidden elements never flash on page load.
+     *
+     * @param before_standard_head_html_generation $hook The hook instance.
+     */
+    public static function before_standard_head_html_generation_element_hider(
+        before_standard_head_html_generation $hook
+    ): void {
+        // Respect the admin setting.
+        $enable = get_config('local_mention', 'enableelementhider');
+        if (empty($enable)) {
+            return;
+        }
+
+        $css = \local_mention\local\element_hider::get_matching_css();
+        if ($css === '') {
+            return;
+        }
+
+        $hook->add_html('<style>' . $css . '</style>');
+    }
+
+    /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * If enabled, computes the CSS selectors matching the current user's role
+     * (per the element_hider rules) and asks the element_hider AMD module to
+     * hide them.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_element_hider(
+        before_footer_html_generation $hook
+    ): void {
+        // Legacy implementation kept for the footer hook registration.
+        // Intentionally empty: hiding is now performed head-first.
+    }
 }

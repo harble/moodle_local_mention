@@ -318,4 +318,24 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         get_string('enable_category_default_desc', 'local_mention'),
         1  // 默认启用
     ));
+
+    // 启用/禁用页面元素隐藏功能
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enableelementhider',
+        get_string('enable_element_hider', 'local_mention'),
+        get_string('enable_element_hider_desc', 'local_mention'),
+        0  // 默认禁用
+    ));
+
+    // 页面元素隐藏规则
+    // 每行一条规则，格式：角色列表 | CSS选择器 | 备注
+    $settings->add(new admin_setting_configtextarea(
+        'local_mention/element_hider_rules',
+        get_string('element_hider_rules', 'local_mention'),
+        get_string('element_hider_rules_desc', 'local_mention'),
+        '',  // 默认值：空（不隐藏任何元素）
+        PARAM_RAW,
+        '60',  // cols
+        '15'   // rows
+    ));
 }
