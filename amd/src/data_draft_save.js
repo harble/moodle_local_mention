@@ -99,30 +99,32 @@ const setDraftSelected = (include) => {
  * Initialise the module.
  *
  * @param {string} saveLabel Active "Save draft" label text.
- * @param {boolean} showDraft Whether the "Save draft" button should be shown
- *                            for the current entry.
  */
-export const init = (saveLabel, showDraft) => {
-    // Only run on the Database add/edit page: the form must carry a #tags
-    // element and a sticky footer with a Save button.
-    const form = getTagsSelect()?.closest('form');
+export const init = (saveLabel) => {
+    // Any native Database edit form must be saveable, whatever the activity
+    // settings or the entry state. Anchor on a submit button that carries a
+    // name starting with "save" (Save / Save and view / Save and add another /
+    // Save and approve...), falling back to any submit button. The draft button
+    // itself (name="savedraft") is always excluded.
+    const saveSelector = 'input[type="submit"][name^="save"]:not([name="savedraft"])';
+    const firstSave = document.querySelector(saveSelector)
+        || document.querySelector('input[type="submit"]:not([name="savedraft"])');
+    if (!firstSave) {
+        return;
+    }
+    const form = firstSave.closest('form');
     if (!form) {
         return;
     }
 
-    // Publish buttons: "Save" and "Save and add another". Clicking either of
-    // them drops any draft tag so the entry re-enters the review flow.
-    form.querySelectorAll('input[type="submit"][name="saveandview"], input[type="submit"][name="saveandadd"]').forEach((button) => {
+    // Publish buttons: every submit in the form except the draft button itself
+    // acts as "publish". Clicking any of them drops a previously set draft tag
+    // so the entry can re-enter the normal review flow.
+    form.querySelectorAll('input[type="submit"]:not([name="savedraft"])').forEach((button) => {
         button.addEventListener('click', () => {
             setDraftSelected(false);
         });
     });
-
-    // Do not inject the "Save draft" button for entries that may not be saved
-    // as a draft (e.g. an approved entry the user cannot edit).
-    if (!showDraft) {
-        return;
-    }
 
     // Skip injecting the extra button if one already exists (e.g. the hook is
     // ran more than once for the same page).
@@ -130,18 +132,15 @@ export const init = (saveLabel, showDraft) => {
         return;
     }
 
-    // Insert the "Save draft" button right before the first "Save" button so
-    // the final order is: Cancel / Save draft / Save / Save and add another.
-    const firstSave = form.querySelector('input[type="submit"][name="saveandview"]');
-    if (!firstSave) {
-        return;
-    }
-
-    const draftButton = document.createElement('button');
+    // Use the same element type (input[type="submit"]) and class as the native
+    // "Save" button so both render identically in every theme. Using a raw
+    // <button> would look the same class-wise but can pick up different
+    // element-specific styling from the theme.
+    const draftButton = document.createElement('input');
     draftButton.type = 'submit';
     draftButton.name = 'savedraft';
-    draftButton.className = 'btn btn-primary mx-1';
-    draftButton.textContent = saveLabel;
+    draftButton.className = firstSave.className;
+    draftButton.value = saveLabel;
 
     draftButton.addEventListener('click', () => {
         setDraftSelected(true);
