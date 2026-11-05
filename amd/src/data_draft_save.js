@@ -100,7 +100,7 @@ const setDraftSelected = (include) => {
  *
  * @param {string} saveLabel Active "Save draft" label text.
  */
-export const init = (saveLabel) => {
+export const init = (saveLabel, publishLabel) => {
     // Any native Database edit form must be saveable, whatever the activity
     // settings or the entry state. Anchor on a submit button that carries a
     // name starting with "save" (Save / Save and view / Save and add another /
@@ -115,6 +115,13 @@ export const init = (saveLabel) => {
     const form = firstSave.closest('form');
     if (!form) {
         return;
+    }
+
+    // Rebrand the plain "Save" button (which publishes the entry) as "Publish",
+    // so the sticky footer reads "Cancel / Save draft / Publish / ...".
+    const saveViewButton = form.querySelector('input[type="submit"][name="saveandview"]');
+    if (saveViewButton && publishLabel) {
+        saveViewButton.value = publishLabel;
     }
 
     // Publish buttons: every submit in the form except the draft button itself

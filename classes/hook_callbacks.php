@@ -504,8 +504,9 @@ class hook_callbacks {
         // the user is able to edit this entry here, so draft saving is always
         // meaningful. No extra permission filter is needed.
         $savelabel = get_string('savedraft', 'local_mention');
+        $publishlabel = get_string('publish', 'local_mention');
 
-        $PAGE->requires->js_call_amd('local_mention/data_draft_save', 'init', [$savelabel]);
+        $PAGE->requires->js_call_amd('local_mention/data_draft_save', 'init', [$savelabel, $publishlabel]);
     }
 
     /**
