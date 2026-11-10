@@ -536,7 +536,35 @@ class hook_callbacks {
         $savelabel = get_string('savedraft', 'local_mention');
         $publishlabel = get_string('publish', 'local_mention');
 
-        $PAGE->requires->js_call_amd('local_mention/data_draft_save', 'init', [$savelabel, $publishlabel]);
+        // Pin/prime checkboxes are rendered only for "entry managers": system
+        // administrators (global scope) or anyone holding the
+        // mod/data:manageentries capability in this activity (channel scope).
+        $pinprime = null;
+        $systemctx = \context_system::instance();
+        $isglobal = is_siteadmin()
+            || has_capability('moodle/site:config', $systemctx)
+            || has_capability('moodle/course:update', $systemctx);
+        $ismanager = $isglobal || has_capability('mod/data:manageentries', $PAGE->context);
+        if ($ismanager) {
+            $scope = $isglobal ? 'global' : 'channel';
+            $pinprime = [
+                'scope' => $scope,
+                'labels' => [
+                    'pin' => get_string('pinlabel_' . $scope, 'local_mention'),
+                    'prime' => get_string('primelabel_' . $scope, 'local_mention'),
+                ],
+                'tags' => [
+                    'pin' => get_string('pintag_' . $scope, 'local_mention'),
+                    'prime' => get_string('primetag_' . $scope, 'local_mention'),
+                ],
+            ];
+        }
+
+        $PAGE->requires->js_call_amd(
+            'local_mention/data_draft_save',
+            'init',
+            [$savelabel, $publishlabel, $pinprime]
+        );
     }
 
     /**

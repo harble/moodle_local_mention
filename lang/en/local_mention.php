@@ -4,6 +4,16 @@
 $string['pluginname'] = 'Share service';
 $string['savedraft'] = 'Save draft';
 $string['publish'] = 'Publish';
+
+// Pin/prime checkbox labels and tag names (global uses square brackets, channel uses parentheses).
+$string['pinlabel_global'] = 'Pin (global)';
+$string['primelabel_global'] = 'Featured (global)';
+$string['pinlabel_channel'] = 'Pin (channel)';
+$string['primelabel_channel'] = 'Featured (channel)';
+$string['pintag_global'] = '置顶[PIN]';
+$string['primetag_global'] = '精选[PRIME]';
+$string['pintag_channel'] = '置顶(pin)';
+$string['primetag_channel'] = '精选(prime)';
 $string['privacy:metadata'] = 'The local_mention plugin stores mention notifications.';
 $string['messageprovider:mentions'] = 'Mention notifications';
 $string['mentionnotificationsubject'] = '{$a->author} mentioned you: {$a->item}';

@@ -63,44 +63,75 @@ const getTagsSelect = () => {
 };
 
 /**
- * Set the draft tag selection on the native tags <select>.
+ * Set (or clear) a single tag on the native tags <select>.
  *
- * @param {boolean} include Whether the draft tag should be selected.
+ * @param {string} tagName The raw tag name to add/remove.
+ * @param {boolean} include Whether the tag should be selected.
  */
-const setDraftSelected = (include) => {
+const setTagSelected = (tagName, include) => {
     const select = getTagsSelect();
     if (!select) {
         return;
     }
 
-    // Find an existing option whose value is the draft tag (case-insensitive).
-    let draftOption = Array.from(select.options).find(
-        (option) => norm(option.value) === norm(DRAFT_TAG)
+    // Find an existing option whose value is the tag (case-insensitive).
+    let option = Array.from(select.options).find(
+        (candidate) => norm(candidate.value) === norm(tagName)
     );
 
     if (include) {
         // Ensure the option exists, then select it.
-        if (!draftOption) {
-            draftOption = document.createElement('option');
-            draftOption.value = DRAFT_TAG;
-            draftOption.textContent = DRAFT_TAG;
-            select.add(draftOption);
+        if (!option) {
+            option = document.createElement('option');
+            option.value = tagName;
+            option.textContent = tagName;
+            select.add(option);
         }
-        draftOption.selected = true;
-        draftOption.setAttribute('selected', 'selected');
-    } else if (draftOption) {
-        // Deselect an existing draft option (leaves the option itself in place).
-        draftOption.selected = false;
-        draftOption.removeAttribute('selected');
+        option.selected = true;
+        option.setAttribute('selected', 'selected');
+    } else if (option) {
+        // Deselect an existing option (leaves the option itself in place).
+        option.selected = false;
+        option.removeAttribute('selected');
     }
+};
+
+/**
+ * Set whether the draft tag is selected on the native tags <select>.
+ *
+ * @param {boolean} include Whether the draft tag should be selected.
+ */
+const setDraftSelected = (include) => setTagSelected(DRAFT_TAG, include);
+
+/**
+ * Whether a given tag is currently selected on the native tags <select>.
+ *
+ * @param {string} tagName The raw tag name to look up.
+ * @returns {boolean}
+ */
+const isTagSelected = (tagName) => {
+    const select = getTagsSelect();
+    if (!select) {
+        return false;
+    }
+    const option = Array.from(select.options).find(
+        (candidate) => norm(candidate.value) === norm(tagName)
+    );
+    return !!option && option.selected;
 };
 
 /**
  * Initialise the module.
  *
  * @param {string} saveLabel Active "Save draft" label text.
+ * @param {string} publishLabel Active label for the plain "Save" (publish) button.
+ * @param {Object|null} pinPrime Config for the "pin"/"prime" checkboxes, or null
+ *                              when they should not be rendered at all. Shape:
+ *                              { scope: 'global'|'channel',
+ *                                labels: {pin, prime},
+ *                                tags: {pin, prime} }.
  */
-export const init = (saveLabel, publishLabel) => {
+export const init = (saveLabel, publishLabel, pinPrime) => {
     // Any native Database edit form must be saveable, whatever the activity
     // settings or the entry state. Anchor on a submit button that carries a
     // name starting with "save" (Save / Save and view / Save and add another /
@@ -115,6 +146,32 @@ export const init = (saveLabel, publishLabel) => {
     const form = firstSave.closest('form');
     if (!form) {
         return;
+    }
+
+    // Re-layout the toolbar and move the native "Cancel" link to the far right.
+    // The sticky footer is usually NOT a flex container and Boost clips any
+    // overflow (`.sticky-footer-content { overflow: hidden }`), so once the
+    // extra checkboxes and the draft button are inserted the right-most
+    // "Cancel" would be pushed off-screen and hidden. Making the row a flexible
+    // one (wrapping when needed) and lifting the ancestor overflow keeps every
+    // control visible, with Cancel last -> footer reads
+    // "[pin/prime] Save draft / Publish / Save and add another / Cancel".
+    const btnrow = firstSave.parentNode;
+    if (btnrow) {
+        btnrow.style.display = 'flex';
+        btnrow.style.flexWrap = 'wrap';
+        btnrow.style.alignItems = 'center';
+        btnrow.style.gap = '0.5rem';
+
+        const overflowAncestor = btnrow.closest('.sticky-footer-content');
+        if (overflowAncestor) {
+            overflowAncestor.style.overflow = 'visible';
+        }
+
+        const cancelLink = btnrow.querySelector('a.btn-secondary, a[role="button"]');
+        if (cancelLink) {
+            btnrow.appendChild(cancelLink);
+        }
     }
 
     // Rebrand the plain "Save" button (which publishes the entry) as "Publish",
@@ -154,4 +211,85 @@ export const init = (saveLabel, publishLabel) => {
     });
 
     firstSave.parentNode?.insertBefore(draftButton, firstSave);
+
+    // Render the pin/prime checkboxes (if allowed) in front of the draft button.
+    if (pinPrime) {
+        renderPinPrimeCheckboxes(draftButton, pinPrime);
+    }
+
+    // On submit, forcibly reconcile every pin/prime checkbox against the tags
+    // <select> using the checkbox state as the source of truth. This covers the
+    // case where the entry was opened with a pin/prime tag already set (so the
+    // checkbox is checked) but the user removed the tag manually without ever
+    // toggling the checkbox: no "change" event fired, yet saving must restore
+    // the tag because the checkbox is still checked. The same reconciliation
+    // also removes a tag when the checkbox was unchecked.
+    form.addEventListener('submit', () => {
+        form.querySelectorAll('input[type="checkbox"][data-lm-tag]').forEach((checkbox) => {
+            setTagSelected(checkbox.dataset.lmTag, checkbox.checked);
+        });
+    });
+};
+
+/**
+ * Build a single pin/prime inline checkbox and wire it to the tags select.
+ *
+ * @param {string} baseId Unique element id prefix.
+ * @param {string} tagName The raw tag to toggle (e.g. "置顶[pin]").
+ * @param {string} caption The visible label (e.g. "置顶(全局)").
+ * @returns {HTMLLabelElement}
+ */
+const makeToggleLabel = (baseId, tagName, caption) => {
+    const label = document.createElement('label');
+    label.className = 'form-check-inline mx-1 mb-0';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'form-check-input me-1';
+    checkbox.id = baseId;
+    checkbox.dataset.lmTag = tagName;
+    checkbox.checked = isTagSelected(tagName);
+
+    // Toggling immediately reflects the chosen tag on the authoritative native
+    // tags <select>, which is submitted when the form is saved.
+    checkbox.addEventListener('change', () => {
+        setTagSelected(tagName, checkbox.checked);
+    });
+
+    label.appendChild(checkbox);
+
+    const text = document.createElement('span');
+    text.textContent = caption;
+    label.appendChild(text);
+
+    return label;
+};
+
+/**
+ * Insert the two "pin/prime" checkboxes in front of the given anchor button.
+ *
+ * @param {HTMLElement} anchor A button that already exists in the toolbar.
+ * @param {Object} config The pin/prime configuration (labels + tags).
+ */
+const renderPinPrimeCheckboxes = (anchor, config) => {
+    const scope = config.scope === 'global' ? 'global' : 'channel';
+    const pinTag = config.tags && config.tags.pin ? config.tags.pin : '';
+    const primeTag = config.tags && config.tags.prime ? config.tags.prime : '';
+    const pinLabel = config.labels && config.labels.pin ? config.labels.pin : 'Pin';
+    const primeLabel = config.labels && config.labels.prime ? config.labels.prime : 'Prime';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'localmention-pinprime d-inline-flex align-items-center mx-3';
+    wrapper.style.gap = '1rem';
+
+    if (pinTag) {
+        const idSuffix = Math.random().toString(36).slice(2, 8);
+        wrapper.appendChild(makeToggleLabel('lm_pin_' + idSuffix, pinTag, pinLabel));
+    }
+    if (primeTag) {
+        const idSuffix = Math.random().toString(36).slice(2, 8);
+        wrapper.appendChild(makeToggleLabel('lm_prime_' + idSuffix, primeTag, primeLabel));
+    }
+
+    anchor.parentNode?.insertBefore(wrapper, anchor);
 };
