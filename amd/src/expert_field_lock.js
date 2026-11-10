@@ -69,16 +69,24 @@ export const init = (allowedTitles) => {
         // and still submitted with the form.
         container.querySelectorAll('input[type="text"], input[type="url"], input[type="email"], textarea').forEach((el) => {
             el.readOnly = true;
+            el.tabIndex = -1;
         });
 
-        // All other interactive controls: disable them.
-        container.querySelectorAll('input:not([type="hidden"]), select, button, [contenteditable="true"]').forEach((el) => {
-            if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLButtonElement) {
-                el.disabled = true;
-            }
-            if (el.hasAttribute('contenteditable')) {
-                el.setAttribute('contenteditable', 'false');
-            }
+        // Other interactive controls (select, checkbox, radio, file, ...).
+        // Importantly we do NOT set "disabled": a disabled control's value is
+        // omitted from the form payload, so a required field would fail the
+        // server-side validation ("You must provide a value") even when the
+        // user did not touch the entry. Interaction is already blocked by the
+        // container's pointer-events:none; tabIndex=-1 additionally blocks
+        // keyboard focus. This keeps the original value submitting normally.
+        container.querySelectorAll('input:not([type="hidden"]), select, [contenteditable="true"]').forEach((el) => {
+            el.tabIndex = -1;
+        });
+
+        // Buttons (e.g. file-manager buttons) can be safely disabled: their
+        // value is not a field value and is never required.
+        container.querySelectorAll('button').forEach((el) => {
+            el.disabled = true;
         });
 
         // Disable any TinyMCE editor instance that has already been

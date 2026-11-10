@@ -408,8 +408,14 @@ class hook_callbacks {
             return;
         }
 
-        // Site admins and the record author keep full editing rights.
-        if (is_siteadmin() || (int)$authorid === (int)$USER->id) {
+        // Site admins, site-level managers and the record author keep full
+        // editing rights. "Manager" here means a site-level management account
+        // (shortname "manager" normally carries moodle/course:update at the
+        // system context), which we detect via that capability.
+        $systemadmin = is_siteadmin()
+            || has_capability('moodle/site:config', \context_system::instance())
+            || has_capability('moodle/course:update', \context_system::instance());
+        if ($systemadmin || (int)$authorid === (int)$USER->id) {
             return;
         }
 
