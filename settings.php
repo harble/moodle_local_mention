@@ -355,4 +355,34 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         get_string('enable_course_summary_desc', 'local_mention'),
         1  // 默认启用
     ));
+
+    // 批量添加评论版块：默认排除课程ID列表
+    // 逗号分隔；在批量添加页执行时会把最新使用的列表同时写回此配置，
+    // 因此这里也被视为"最后使用的排除列表"。
+    $settings->add(new admin_setting_configtext(
+        'local_mention/comments_exclude',
+        get_string('comments_exclude', 'local_mention'),
+        get_string('comments_exclude_desc', 'local_mention'),
+        '33,35,36,654',  // 默认值：内置缺省
+        PARAM_RAW,
+        30  // 输入框宽度
+    ));
+
+    // 批量给课程添加评论版块的管理页面入口
+    $ADMIN->add('localplugins', new admin_externalpage(
+        'local_mention_addcommentsblock',
+        get_string('add_comments_block', 'local_mention'),
+        new moodle_url('/local/mention/add_comments_block.php')
+    ));
+
+    // 在设置页中提供一个直接跳转到批量添加评论版块页的链接
+    $settings->add(new admin_setting_heading(
+        'local_mention/addcommentsblocklink',
+        get_string('add_comments_block', 'local_mention'),
+        html_writer::link(
+            new moodle_url('/local/mention/add_comments_block.php'),
+            get_string('add_comments_block', 'local_mention'),
+            ['class' => 'btn btn-primary btn-sm mt-2']
+        )
+    ));
 }

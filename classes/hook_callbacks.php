@@ -765,4 +765,85 @@ class hook_callbacks {
         // Move the injected block to the top of the main content area.
         $PAGE->requires->js_call_amd('local_mention/course_summary', 'init');
     }
+
+    /**
+     * Callback for before_http_headers hook.
+     *
+     * Registers the "content" block region on course view pages before the page
+     * block manager loads its block instances. Without this registration the
+     * Comments blocks that were added with region "content" would be treated as
+     * belonging to an unknown region and silently moved into the page default
+     * region (side-pre for Boost), i.e. the right-hand drawer.
+     *
+     * @param \core\hook\output\before_http_headers $hook The hook instance.
+     */
+    public static function before_http_headers_content_region(\core\hook\output\before_http_headers $hook): void {
+        global $PAGE;
+
+        if ($PAGE === null) {
+            return;
+        }
+
+        // Only course view pages (course-view, course-view-*).
+        if (strpos($PAGE->pagetype, PAGE_COURSE_VIEW) !== 0) {
+            return;
+        }
+        if (!$PAGE->course || (int)$PAGE->course->id === SITEID) {
+            return;
+        }
+
+        // Nothing to do unless at least one Comments block lives in the content region.
+        if (!comments_block_helper::has_content_region_comments((int)$PAGE->course->id)) {
+            return;
+        }
+
+        // Add the region to the per-page region list so load_blocks() keeps the
+        // block in "content" instead of falling back to the theme default region.
+        // $custom = true also registers the region for this page type in the
+        // session (like a theme-declared region), so block management actions
+        // (drag & drop, move) recognise "content" exactly like "side-pre".
+        if (!$PAGE->blocks->is_known_region('content')) {
+            $PAGE->blocks->add_region('content');
+        }
+    }
+
+    /**
+     * Callback for after_standard_main_region_html_generation hook.
+     *
+     * Renders any blocks that belong to the "content" region right below the
+     * main content area. Boost and most other themes never render the "content"
+     * region themselves, so without this hook the Comments blocks placed in that
+     * region would simply be invisible.
+     *
+     * @param after_standard_main_region_html_generation $hook The hook instance.
+     */
+    public static function after_main_region_content_blocks(
+        after_standard_main_region_html_generation $hook
+    ): void {
+        global $PAGE;
+
+        // Only course view pages.
+        if (strpos($PAGE->pagetype, PAGE_COURSE_VIEW) !== 0) {
+            return;
+        }
+        if (!$PAGE->course || (int)$PAGE->course->id === SITEID) {
+            return;
+        }
+
+        // Nothing to render unless at least one Comments block lives in the content region.
+        if (!comments_block_helper::has_content_region_comments((int)$PAGE->course->id)) {
+            return;
+        }
+
+        // Render the "content" block region itself. core_renderer::blocks()
+        // knows how to build the region container (and switches <aside> to
+        // <section> for the main content region automatically).
+        $hook->add_html($hook->renderer->blocks('content'));
+
+        // Boost renders this hook output *after* the footer (see
+        // theme/boost/templates/drawers.mustache: standard_after_main_region_html),
+        // so relocate the whole #block-region-content element into the bottom of
+        // the main content card (#region-main) afterwards.
+        $PAGE->requires->js_call_amd('local_mention/content_region_blocks', 'init');
+    }
 }

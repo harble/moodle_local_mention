@@ -70,11 +70,19 @@ $callbacks = [
         'callback' => [\local_mention\hook_callbacks::class, 'before_http_headers'],
     ],
     [
+        'hook' => \core\hook\output\before_http_headers::class,
+        'callback' => [\local_mention\hook_callbacks::class, 'before_http_headers_content_region'],
+    ],
+    [
         'hook' => \core\hook\output\before_standard_head_html_generation::class,
         'callback' => [\local_mention\hook_callbacks::class, 'before_standard_head_html_generation_element_hider'],
     ],
     [
         'hook' => \core\hook\output\after_standard_main_region_html_generation::class,
         'callback' => [\local_mention\hook_callbacks::class, 'after_main_region_course_summary'],
+    ],
+    [
+        'hook' => \core\hook\output\after_standard_main_region_html_generation::class,
+        'callback' => [\local_mention\hook_callbacks::class, 'after_main_region_content_blocks'],
     ],
 ];
