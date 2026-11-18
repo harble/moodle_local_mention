@@ -347,4 +347,12 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         '60',  // cols
         '15'   // rows
     ));
+
+    // 课程摘要自动注入开关
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enablecoursesummary',
+        get_string('enable_course_summary', 'local_mention'),
+        get_string('enable_course_summary_desc', 'local_mention'),
+        1  // 默认启用
+    ));
 }

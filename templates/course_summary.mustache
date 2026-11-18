@@ -1,0 +1,62 @@
+{{!
+    @package  local_mention
+    @template  local_mention/course_summary
+
+    Auto-injected "Course summary" section shown as the very first topic on
+    the course page. The markup mirrors the native course section structure so
+    it inherits the exact same styling as real sections.
+
+    Core semantic attributes (data-for="section", data-number, ...) are
+    deliberately omitted so the core course-format JavaScript does not treat
+    this block as a real section.
+
+    Context variables required for this template:
+    * summary - Fully formatted (HTML) course description.
+
+    Example context (json):
+    {
+        "summary": "<p>This is the course description.</p>"
+    }
+}}
+<li id="section-summary" class="course-summary-block section course-section main clearfix">
+    <div class="section-item">
+        <div class="course-section-header d-flex" data-for="section_summary_title">
+            <div class="d-flex align-items-center position-relative">
+                <a role="button"
+                    data-bs-toggle="collapse"
+                    href="#coursesummarycollapse"
+                    id="collapsesectionid-summary"
+                    aria-expanded="true"
+                    aria-controls="coursesummarycollapse"
+                    class="btn btn-icon me-3 icons-collapse-expand"
+                    aria-label="{{#str}}coursesummary, local_mention{{/str}}">
+                    <span class="expanded-icon icon-no-margin p-2" title="{{#str}}collapse, core{{/str}}">
+                        <i class="icon fa fa-chevron-down fa-fw " aria-hidden="true"></i>
+                        <span class="visually-hidden">{{#str}}collapse, core{{/str}}</span>
+                    </span>
+                    <span class="collapsed-icon icon-no-margin p-2" title="{{#str}}expand, core{{/str}}">
+                        <span class="dir-rtl-hide"><i class="icon fa fa-chevron-right fa-fw " aria-hidden="true"></i></span>
+                        <span class="dir-ltr-hide"><i class="icon fa fa-chevron-left fa-fw " aria-hidden="true"></i></span>
+                        <span class="visually-hidden">{{#str}}expand, core{{/str}}</span>
+                    </span>
+                </a>
+                <h3 class="h4 d-flex sectionname course-content-item align-self-stretch align-items-center mb-0" data-for="section_summary_title">
+                    {{#str}}coursesummary, local_mention{{/str}}
+                </h3>
+            </div>
+            <div data-region="sectionbadges" class="sectionbadges d-flex align-items-center">
+            </div>
+        </div>
+        <div id="coursesummarycollapse" class="content course-content-item-content collapse show">
+            <div class=" my-3" data-for="sectioninfo">
+                <div class="summarytext">
+                    <div class="no-overflow">{{{summary}}}</div>
+                </div>
+                <div class="section_availability">
+                </div>
+            </div>
+            <ul class="section m-0 p-0 img-text " data-for="cmlist">
+            </ul>
+        </div>
+    </div>
+</li>

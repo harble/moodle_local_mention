@@ -128,3 +128,8 @@ $string['enable_element_hider'] = '启用按角色隐藏页面元素';
 $string['enable_element_hider_desc'] = '开启后根据下方规则，在页面上隐藏指定的元素。';
 $string['element_hider_rules'] = '页面元素隐藏规则';
 $string['element_hider_rules_desc'] = '每行一条规则，格式：角色列表 | CSS选择器 | 备注<br>角色列表：填写角色的"自定义角色全称"，多个角色用英文或中文逗号分隔。留空或填写 ALL（不区分大小写）表示对所有用户生效。<br>CSS选择器：要隐藏的元素选择器，例如 .block_xxx 或 #some-id。<br>备注：仅用于备注说明，不参与隐藏逻辑。<br>示例：<pre>审核员,管理员 | .block_vitrina | 首页侧栏<br> | .block_totop | 所有人隐藏<br>ALL | #footer | 全局隐藏</pre>';
+
+// 课程摘要自动注入。
+$string['coursesummary'] = '课程摘要';
+$string['enable_course_summary'] = '在课程页面显示课程描述';
+$string['enable_course_summary_desc'] = '启用后，将自动把课程描述（摘要）注入到每个不在课程页展示描述的课程页面中。当描述内容为空时不显示任何内容。';

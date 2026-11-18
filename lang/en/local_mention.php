@@ -128,3 +128,8 @@ $string['enable_element_hider'] = 'Enable role based page element hiding';
 $string['enable_element_hider_desc'] = 'When enabled, hides the page elements defined by the rules below.';
 $string['element_hider_rules'] = 'Page element hiding rules';
 $string['element_hider_rules_desc'] = 'One rule per line, format: roles | CSS selector | note<br>Roles: fill in the role "Custom full name"s; separate multiple roles with English or Chinese commas. Leave empty or use ALL (case-insensitive) to apply to every user.<br>CSS selector: the selector of the element to hide, e.g. .block_xxx or #some-id.<br>Note: only for administration readability, not used in the hiding logic.<br>Examples:<pre>Reviewer,Manager | .block_vitrina | Homepage sidebar<br> | .block_totop | Hidden for everyone<br>ALL | #footer | Hide globally</pre>';
+
+// Course summary auto-injection.
+$string['coursesummary'] = 'Course summary';
+$string['enable_course_summary'] = 'Show course description on course pages';
+$string['enable_course_summary_desc'] = 'When enabled, the course description (summary) is automatically injected onto every course page that does not already display it. Nothing is shown when the description is empty.';

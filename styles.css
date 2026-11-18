@@ -12,6 +12,10 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+.course-summary-content {
+    line-height: 1.6;
+}
+
 .local-mention-item {
     display: flex;
     align-items: center;

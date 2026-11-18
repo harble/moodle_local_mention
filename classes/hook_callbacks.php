@@ -18,6 +18,7 @@ namespace local_mention;
 
 use core\hook\output\before_footer_html_generation;
 use core\hook\output\before_standard_head_html_generation;
+use core\hook\output\after_standard_main_region_html_generation;
 
 /**
  * Hook callbacks for local_mention.
@@ -699,5 +700,69 @@ class hook_callbacks {
     ): void {
         // Legacy implementation kept for the footer hook registration.
         // Intentionally empty: hiding is now performed head-first.
+    }
+
+    /**
+     * Callback for after_standard_main_region_html_generation hook.
+     *
+     * Auto-injects the course description (summary) onto every course view page,
+     * rendered as a "course summary" block. Nothing is rendered when the summary
+     * is empty, or when the feature is disabled by the admin setting.
+     *
+     * @param after_standard_main_region_html_generation $hook The hook instance.
+     */
+    public static function after_main_region_course_summary(
+        after_standard_main_region_html_generation $hook
+    ): void {
+        global $PAGE;
+
+        // Respect the admin setting (defaults to enabled when unset).
+        $enable = get_config('local_mention', 'enablecoursesummary');
+        if ($enable === null) {
+            $enable = true;
+        }
+        if ((bool)$enable === false) {
+            return;
+        }
+
+        // Only process course view pages, and never the site home page.
+        if (strpos($PAGE->pagetype, PAGE_COURSE_VIEW) !== 0) {
+            return;
+        }
+        if (!$PAGE->course || (int)$PAGE->course->id === SITEID) {
+            return;
+        }
+
+        $course = $PAGE->course;
+        $context = \context_course::instance($course->id);
+
+        // Rewrite any course file URLs, then render the formatted summary.
+        $summary = file_rewrite_pluginfile_urls(
+            $course->summary,
+            'pluginfile.php',
+            $context->id,
+            'course',
+            'summary',
+            null
+        );
+        $options = new \stdClass();
+        $options->noclean = true;
+        $options->overflowdiv = true;
+        $html = format_text($summary, $course->summaryformat, $options);
+
+        // Skip when the summary has no visible text and no embedded media.
+        $plain = trim(strip_tags($html));
+        if ($plain === '' && !preg_match('/<(img|video|audio|embed|object|iframe)\b/i', $html)) {
+            return;
+        }
+
+        $renderer = $hook->renderer;
+        $hook->add_html($renderer->render_from_template(
+            'local_mention/course_summary',
+            ['summary' => $html]
+        ));
+
+        // Move the injected block to the top of the main content area.
+        $PAGE->requires->js_call_amd('local_mention/course_summary', 'init');
     }
 }
