@@ -385,4 +385,17 @@ if (has_capability('local/mention:manage', context_system::instance())) {
             ['class' => 'btn btn-primary btn-sm mt-2']
         )
     ));
+
+    // Database 文本域字段中的安全 iframe 白名单域名
+    // 每行一个域名；该列表内的 iframe 在保存时会被保留而不会被清洗移除。
+    // 留空表示不启用白名单保护（保持默认行为：所有 iframe 都会被移除）。
+    $settings->add(new admin_setting_configtextarea(
+        'local_mention/safe_iframe_domains',
+        get_string('safe_iframe_domains', 'local_mention'),
+        get_string('safe_iframe_domains_desc', 'local_mention'),
+        '',  // 默认值：空（不启用保护）
+        PARAM_RAW,
+        '60',  // cols
+        '10'   // rows
+    ));
 }

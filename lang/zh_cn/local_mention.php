@@ -164,3 +164,5 @@ $string['comments_block_help_2'] = '课程ID：留空表示处理所有课程，
 $string['comments_block_help_3'] = '排除课程ID：逗号分隔的课程ID列表，这些课程永远不会被处理（默认 33,35,36,654）。页面已含 Showcase 版块的课程也会自动跳过。';
 $string['comments_block_help_4'] = '建议先点「预览」查看将影响的课程范围，确认无误后再点「执行」真正写入版块。';
 $string['comments_block_help_5'] = '所有写操作均受会话校验（sesskey）保护，且仅站点管理员可执行。';
+$string['safe_iframe_domains'] = 'Database 文本域字段的安全 iframe 白名单域名';
+$string['safe_iframe_domains_desc'] = '每行填写一个视频/嵌入平台域名，例如：www.youtube.com、player.bilibili.com、player.vimeo.com。Database 的"文本域"字段在保存内容时，只有 src 域名命中该白名单的 iframe 标签才会被保留；未命中的 iframe 仍会被默认清洗逻辑移除。留空则不启用保护（所有 iframe 都会被移除）。该机制已同时考虑存储型 XSS 风险：仅放行白名单域，且其他危险内容仍按 PARAM_CLEAN 清洗。';
