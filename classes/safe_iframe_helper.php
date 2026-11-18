@@ -176,24 +176,49 @@ class safe_iframe_helper {
     private static function sanitize_iframe(string $tag, string $src): string {
         // Attributes that are safe to keep (values are escaped below).
         $allowed = [
-            'width', 'height', 'title', 'allow', 'frameborder', 'scrolling',
+            'title', 'allow', 'frameborder', 'scrolling',
             'loading', 'referrerpolicy', 'name', 'align', 'class',
         ];
 
+        // Numeric width/height from the source tag (if any).
+        $width = null;
+        $height = null;
+        if (preg_match('/\bwidth\s*=\s*(["\'])(\d+)\1/i', $tag, $m)) {
+            $width = (int)$m[2];
+        }
+        if (preg_match('/\bheight\s*=\s*(["\'])(\d+)\1/i', $tag, $m)) {
+            $height = (int)$m[2];
+        }
+
+        // Script may want a responsive iframe: inject width/height machinery.
+        $widthauto = ($width === null || $width <= 0);
+        $heightauto = ($height === null || $height <= 0);
+
         $out = '<iframe src="' . s($src) . '"';
+        if ($widthauto) {
+            // No usable width: fill the available content width.
+            $out .= ' width="100%"';
+        } else {
+            $out .= ' width="' . $width . '"';
+        }
+
+        if (!$heightauto) {
+            // Explicit height is trusted.
+            $out .= ' height="' . $height . '"';
+        } else if ($widthauto) {
+            // No width and no height: lock a 16:9 ratio so the height grows
+            // proportionally to the (full-width) container.
+            $out .= ' style="width:100%;aspect-ratio:16/9;border:0"';
+        } else {
+            // Numeric width without height: derive a 16:9 height.
+            $derived = (int) round($width * 9 / 16);
+            $out .= ' height="' . $derived . '"';
+        }
+
         foreach ($allowed as $attr) {
             // Tolerates both value="" and bare boolean attributes, and both quote styles.
             if (preg_match('/\b' . preg_quote($attr, '/') . '\s*=\s*(["\'])(.*?)\1/is', $tag, $m)) {
-                $value = $m[2];
-                if ($attr === 'width' || $attr === 'height') {
-                    // Numeric values only.
-                    $value = (string)(int)$value;
-                    if ($value !== '0' && $value !== '') {
-                        $out .= ' ' . $attr . '="' . $value . '"';
-                    }
-                    continue;
-                }
-                $out .= ' ' . $attr . '="' . s($value) . '"';
+                $out .= ' ' . $attr . '="' . s($m[2]) . '"';
                 continue;
             }
             // Bare boolean form, e.g. allowfullscreen or frameborder.
