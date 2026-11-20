@@ -575,6 +575,72 @@ class hook_callbacks {
     }
 
     /**
+     * Callback for before_footer_html_generation hook.
+     *
+     * Limits how many options can be selected in Database "multi-select menu"
+     * (multimenu) fields on the native add/edit page, based on the
+     * "field description:max" rules configured in the plugin settings. The
+     * enforcement is client-side only (the select's "change" event trims
+     * over-limit selections), so no Database core file needs to change.
+     *
+     * @param before_footer_html_generation $hook The hook instance.
+     */
+    public static function before_footer_html_generation_multimenu_limit(
+        before_footer_html_generation $hook
+    ): void {
+        global $PAGE;
+
+        // Respect the admin switch.
+        $enable = get_config('local_mention', 'enablemm_limit');
+        if ($enable === false || (bool)$enable === false) {
+            return;
+        }
+
+        // Only operate on the native Database activity add/edit page.
+        if (strpos($PAGE->url->out(), '/mod/data/edit.php') === false) {
+            return;
+        }
+
+        // Only process module contexts for the Database activity.
+        if (!$PAGE->cm || $PAGE->cm->modname !== 'data') {
+            return;
+        }
+
+        // Parse the rules: one "description:max" pair per line, e.g.
+        // "channels:3" means the field whose description is "channels" can
+        // have at most 3 selected options.
+        $raw = (string)(get_config('local_mention', 'mm_limit_rules') ?? '');
+        $rules = [];
+        foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            $bits = explode(':', $line, 2);
+            if (count($bits) !== 2) {
+                continue;
+            }
+            $desc = trim($bits[0]);
+            $max = (int)trim($bits[1]);
+            if ($desc === '' || $max < 1) {
+                continue;
+            }
+            $rules[] = [$desc, $max];
+        }
+
+        if (empty($rules)) {
+            return;
+        }
+
+        $hint = get_string('multimenu_limit_hint', 'local_mention');
+        $PAGE->requires->js_call_amd(
+            'local_mention/multimenu_limit',
+            'init',
+            [$rules, $hint]
+        );
+    }
+
+    /**
      * Callback for the before_http_headers output hook.
      *
      * When a non-admin user with category management capabilities opens

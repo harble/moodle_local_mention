@@ -398,4 +398,26 @@ if (has_capability('local/mention:manage', context_system::instance())) {
         '60',  // cols
         '10'   // rows
     ));
+
+    // Database "multi-select menu" (multimenu) 字段的多选数量限制。
+    // 方案 A：纯前端限制，不修改任何 core 文件。
+    // 启用后才能对匹配规则的字段实施"最多可选 N 项"约束。
+    $settings->add(new admin_setting_configcheckbox(
+        'local_mention/enablemm_limit',
+        get_string('mm_limit_enable', 'local_mention'),
+        get_string('mm_limit_enable_desc', 'local_mention'),
+        1  // 默认启用
+    ));
+
+    // 多选限制规则：每行一条 "字段描述:最大数量"。
+    // 例如 channels:3 表示对描述为 channels 的字段限制最多选 3 项。
+    $settings->add(new admin_setting_configtextarea(
+        'local_mention/mm_limit_rules',
+        get_string('mm_limit_rules', 'local_mention'),
+        get_string('mm_limit_rules_desc', 'local_mention'),
+        'channels:3',  // 默认值：channels 字段最多选 3 项
+        PARAM_RAW,
+        '60',  // cols
+        '6'    // rows
+    ));
 }
