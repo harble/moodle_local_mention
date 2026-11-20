@@ -218,7 +218,7 @@ class safe_iframe_helper {
         foreach ($allowed as $attr) {
             // Tolerates both value="" and bare boolean attributes, and both quote styles.
             if (preg_match('/\b' . preg_quote($attr, '/') . '\s*=\s*(["\'])(.*?)\1/is', $tag, $m)) {
-                $out .= ' ' . $attr . '="' . s($m[2]) . '"';
+                $out .= ' ' . $attr . '="' . s(self::decode_entities($m[2])) . '"';
                 continue;
             }
             // Bare boolean form, e.g. allowfullscreen or frameborder.
@@ -243,9 +243,35 @@ class safe_iframe_helper {
      */
     private static function extract_src(string $tag): ?string {
         if (preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/is', $tag, $matches)) {
-            return $matches[2];
+            return self::decode_entities($matches[2]);
         }
         return null;
+    }
+
+    /**
+     * Decode HTML entities from an attribute value extracted out of a raw
+     * <iframe> tag.
+     *
+     * Attribute values read from the source HTML are still entity-encoded
+     * (e.g. &amp; for a literal &). Feeding such a value straight into s()
+     * would escape it a second time (&amp; => &amp;amp;). Decoding first
+     * yields the real URL/attribute value so that s() only performs a single,
+     * correct escaping pass on output. Repeated decoding also collapses values
+     * that were already double-escaped by earlier saves.
+     *
+     * @param string $value
+     * @return string
+     */
+    private static function decode_entities(string $value): string {
+        $previous = null;
+        $decoded = $value;
+        // Loop until stable so legacy double/triple-escaped values collapse
+        // back to their real characters without over-decoding plain text.
+        for ($i = 0; $decoded !== $previous && $i < 5; $i++) {
+            $previous = $decoded;
+            $decoded = html_entity_decode($decoded, ENT_QUOTES, 'UTF-8');
+        }
+        return $decoded;
     }
 
     /**
